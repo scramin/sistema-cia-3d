@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CiA Collectibles 3D - Gestão em Nuvem</title>
+    
+    <!-- Bibliotecas do Firebase e Gráficos -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --accent: #ff6b00; 
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border: #333333;
+            --success: #00cc66;
+            --warning: #ffcc00;
+            --danger: #ff4444;
+            --info: #0088ff;
+            --tab-bg: #252525;
+            --tab-active: #ff6b00;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+
+        @media print {
+            @page { margin: 0; } 
+            body { background-color: #ffffff; color: #000000; padding: 0; margin: 0; }
+            .no-print { display: none !important; }
+            #print-invoice { display: block !important; padding: 2cm !important; } 
+        }
+
+        #print-invoice { display: none; width: 100%; max-width: 800px; background: white; color: black; padding: 40px; box-sizing: border-box; margin: 0 auto; }
+        .invoice-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 30px; }
+        .invoice-header img { max-width: 150px; }
+        .invoice-title { text-align: right; }
+        .invoice-title h1 { margin: 0; color: var(--accent); font-size: 28px; }
+        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 15px; }
+        .invoice-table th, .invoice-table td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        .invoice-table th { background-color: #f5f5f5; color: #333; }
+        .invoice-total { text-align: right; font-size: 24px; font-weight: bold; color: var(--accent); }
+
+        .main-container { max-width: 1050px; width: 100%; }
+        .header-title { text-align: center; margin-bottom: 20px; }
+        .logo-img { max-width: 220px; height: auto; display: block; margin: 0 auto; }
+        .header-title p { color: var(--text-muted); margin-top: 10px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .tab-nav { display: flex; gap: 8px; margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 10px; justify-content: center; flex-wrap: wrap; }
+        .tab-btn { background-color: var(--tab-bg); color: var(--text-main); border: 1px solid var(--border); padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+        .tab-btn:hover { background-color: #333; }
+        .tab-btn.active { background-color: var(--tab-active); color: white; border-color: var(--tab-active); }
+        .badge { background-color: white; color: var(--tab-active); font-size: 12px; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
+        
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .layout-grid { grid-template-columns: 1fr; } }
+
+        .card { background-color: var(--panel-bg); border: 1px solid var(--border); border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h2 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-top: 0; color: var(--accent); }
+
+        .form-group { margin-bottom: 15px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap;}
+        .form-row .form-group { flex: 1; min-width: 140px;}
+
+        label { display: block; font-size: 14px; margin-bottom: 6px; color: var(--text-muted); }
+        input[type="number"], input[type="text"], input[type="file"], input[type="date"], select { width: 100%; background-color: #2a2a2a; border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 6px; font-size: 16px; box-sizing: border-box; transition: border 0.3s; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+        .checkbox-group { display: flex; align-items: center; margin-bottom: 20px; background-color: #2a2a2a; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; accent-color: var(--accent); cursor: pointer; }
+
+        .tooltip-container { position: relative; display: inline-flex; align-items: center; cursor: help; color: var(--accent); font-weight: bold; }
+        .tooltip-icon { background-color: var(--accent); color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; justify-content: center; align-items: center; font-size: 12px; margin-left: 8px; }
+        .tooltip-text { visibility: hidden; width: 260px; background-color: #333; color: #fff; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 10; bottom: 130%; left: 50%; margin-left: -130px; opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; font-size: 13px; font-weight: normal; border: 1px solid var(--accent); }
+        .tooltip-text strong { color: var(--accent); display: block; margin-bottom: 4px; }
+        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateY(0); }
+
+        .results { background-color: #181818; border: 2px solid var(--border); display: flex; flex-direction: column; }
+        .result-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .result-value { font-weight: bold; font-size: 18px; }
+        .total-highlight { font-size: 24px; color: var(--accent); }
+        .profit-highlight { color: var(--success); font-size: 20px; }
+        .unit-price { font-size: 13px; color: var(--text-muted); text-align: right; margin-top: -8px; margin-bottom: 10px; font-style: italic; }
+
+        .viabilidade-box { background-color: #222; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px; text-align: center; }
+        .via-badge { display: inline-block; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #000; }
+        .via-green { background-color: var(--success); }
+        .via-yellow { background-color: var(--warning); }
+        .via-red { background-color: var(--danger); color: #fff; }
+        .via-gray { background-color: #555; color: #fff; }
+        .via-text { font-size: 13px; color: var(--text-muted); }
+
+        .btn-salvar { background-color: var(--accent); color: white; border: none; padding: 15px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; margin-top: auto; width: 100%;}
+        .btn-salvar:hover { background-color: #e65c00; }
+        .btn-cancelar { background-color: #555; color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; margin-top: 10px; display: none; width: 100%;}
+        .btn-cancelar:hover { background-color: #777; }
+
+        .header-galeria { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;}
+        .backup-controls { display: flex; gap: 10px; flex-wrap: wrap;}
+        .btn-backup { background-color: #333; color: white; border: 1px solid var(--border); padding: 8px 12px; font-size: 14px; border-radius: 6px; cursor: pointer; }
+        .btn-backup.import { background-color: var(--info); border-color: var(--info); }
+        .btn-backup.excel { background-color: #107c41; border-color: #107c41; }
+        
+        .search-container { margin-bottom: 25px; width: 100%; }
+        .search-container input { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background-color: #2a2a2a; color: var(--text-main); font-size: 16px; }
+        
+        .saved-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .saved-card { background-color: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+        .saved-card-img { width: 100%; height: 200px; object-fit: cover; background-color: #2a2a2a; display: flex; justify-content: center; align-items: center; color: var(--text-muted); font-size: 12px; }
+        .saved-card-content { padding: 15px; flex: 1; display: flex; flex-direction: column;}
+        .saved-title { color: var(--accent); font-size: 18px; margin: 0 0 10px 0; font-weight: bold; }
+        .saved-detail { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+        .saved-total { font-size: 20px; font-weight: bold; color: var(--text-main); margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+        
+        .via-minitag { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #000; }
+        .via-minitag.red { background-color: var(--danger); color: white;}
+        .via-minitag.yellow { background-color: var(--warning); }
+        .via-minitag.green { background-color: var(--success); }
+
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn-editar { background-color: transparent; color: var(--warning); border: 1px solid var(--warning); padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-editar:hover { background-color: var(--warning); color: #000; }
+        .btn-excluir { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-excluir:hover { background-color: var(--danger); color: white; }
+        .empty-state { grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-muted); background-color: var(--panel-bg); border-radius: 8px; border: 1px dashed var(--border); }
+
+        .table-responsive { width: 100%; overflow-x: auto; margin-bottom: 0px; }
+        table.batch-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+        table.batch-table th, table.batch-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        table.batch-table th { color: var(--text-main); background: #333; }
+        .btn-remove-fila { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-doc { background: var(--info); color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s;}
+        
+        .fila-totais { background: #181818; padding: 20px; border: 2px solid var(--accent); border-radius: 8px; text-align: right; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .fila-totais h3 { margin: 0; color: white; font-size: 24px; }
+        .fila-totais span { color: var(--accent); }
+        .btn-pdf { background-color: #ffffff; color: #000000; padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        
+        .caixa-resumo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .caixa-card { background: #1e1e1e; padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .caixa-card h3 { margin: 0 0 10px 0; font-size: 16px; color: var(--text-muted); text-transform: uppercase; }
+        .caixa-card .valor { font-size: 28px; font-weight: bold; }
+        .valor-entrada { color: var(--success); }
+        .valor-saida { color: var(--danger); }
+        .valor-saldo { color: var(--accent); }
+        .caixa-grafico-container { background: #1e1e1e; padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; height: 300px; }
+        .badge-tipo { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; }
+        .bg-entrada { background-color: var(--success); }
+        .bg-saida { background-color: var(--danger); }
+
+        #modalAnexo { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column; }
+        .modal-content { background:#1e1e1e; padding:20px; border-radius:8px; max-width:90%; max-height:90%; display:flex; flex-direction:column; align-items:center; border: 1px solid var(--accent); }
+        .modal-content img { max-width:100%; max-height:70vh; object-fit:contain; margin-bottom:20px; border-radius: 4px;}
+
+        .help-section { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .help-section h3 { color: var(--info); margin-top: 0; margin-bottom: 10px; }
+        .formula-box { background: #2a2a2a; padding: 12px; font-family: monospace; border-left: 4px solid var(--accent); margin-top: 10px; border-radius: 0 4px 4px 0; color: #eee;}
+        
+        .status-nuvem { position: fixed; bottom: 10px; right: 10px; background: #333; color: #aaa; padding: 5px 10px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 5px; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
+        .led-online { width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; display: inline-block; box-shadow: 0 0 5px var(--success);}
+        .led-offline { width: 8px; height: 8px; background-color: var(--danger); border-radius: 50%; display: inline-block; box-shadow: 0 0 5px var(--danger);}
+    </style>
+</head>
+<body>
+
+    <div class="status-nuvem" id="statusNuvem">
+        <span class="led-offline" id="ledStatus"></span> <span id="textoStatus">Conectando...</span>
+    </div>
+
+    <!-- MODAL DE NOTA FISCAL -->
+    <div id="modalAnexo" class="no-print">
+        <div class="modal-content">
+            <h3 style="color:var(--accent); margin-top:0;">Visualização do Comprovante/NF</h3>
+            <img id="imgModalAnexo" src="">
+            <button onclick="document.getElementById('modalAnexo').style.display='none'" style="background:var(--danger); color:white; border:none; padding:10px 25px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:16px;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- VISÃO DE IMPRESSÃO (PDF CLIENTE) -->
+    <div id="print-invoice">
+        <div class="invoice-header">
+            <img src="wmremove-transformed (3).jpg" alt="CiA Collectibles 3D Logo">
+            <div class="invoice-title">
+                <h1>ORÇAMENTO</h1>
+                <p id="invData"></p>
+                <h3 id="invCliente" style="margin-top: 5px;"></h3>
+            </div>
+        </div>
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Qtd</th>
+                    <th>Descrição do Item</th>
+                    <th>V. Unit.</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody id="invTabela"></tbody>
+        </table>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+            <div style="font-size: 14px; color: #555; max-width: 400px;">
+                <p><strong>Observações:</strong></p>
+                <p>Orçamento válido por 15 dias. O tempo de produção inicia após a confirmação do pedido. Nossas peças são produzidas com filamentos de alta qualidade e configuração profissional de impressão 3D.</p>
+            </div>
+            <div style="text-align: right;">
+                <div class="invoice-total">TOTAL: <span id="invTotal">R$ 0,00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container no-print">
+        <div class="header-title">
+            <img src="wmremove-transformed (3).jpg" alt="CiA Collectibles 3D Logo" class="logo-img">
+            <p>Sistema Integrado de Gestão</p>
+        </div>
+
+        <div class="tab-nav">
+            <button class="tab-btn active" id="btn-tab-orcamento" onclick="abrirAba('tab-orcamento')">📝 Nova Peça</button>
+            <button class="tab-btn" id="btn-tab-galeria" onclick="abrirAba('tab-galeria')">📂 Galeria</button>
+            <button class="tab-btn" id="btn-tab-fila" onclick="abrirAba('tab-fila')">📦 Fila <span class="badge" id="badge-fila">0</span></button>
+            <button class="tab-btn" id="btn-tab-caixa" onclick="abrirAba('tab-caixa')">📊 Fluxo de Caixa</button>
+            <button class="tab-btn" id="btn-tab-ajuda" onclick="abrirAba('tab-ajuda')">📖 Ajuda</button>
+        </div>
+
+        <!-- ABA 1: Calculadora Original -->
+        <div id="tab-orcamento" class="tab-content layout-grid" style="display: grid;">
+            <div class="card">
+                <h2>1. Dados do Projeto</h2>
+                <div class="form-group">
+                    <label>Nome da Peça/Cliente</label>
+                    <input type="text" id="nomePeca" placeholder="Ex: Pateta - Festa Infantil">
+                </div>
+                <div class="form-group">
+                    <label>Foto de Referência (Opcional)</label>
+                    <input type="file" id="fotoPeca" accept="image/*" onchange="processarImagem(event)">
+                    <div id="avisoImagem" style="display:none; color: var(--warning); font-size: 13px; margin-top: 8px;">
+                        ⚠️ Uma imagem já está salva. Envie uma nova apenas para substituir.
+                    </div>
+                </div>
+
+                <h2>2. Configurações Base</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Preço do Filamento (R$/kg)</label>
+                        <input type="number" id="precoFilamento" value="100.00" step="0.10" oninput="calcular()">
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; justify-content: space-between;">
+                            Impressora
+                            <span style="color: var(--info); cursor: pointer; font-size: 12px; font-weight: bold; border-bottom: 1px dashed var(--info);" onclick="adicionarImpressoraNova()">+ Adicionar</span>
+                        </label>
+                        <select id="impressora" onchange="calcular()"></select>
+                    </div>
+                </div>
+
+                <h2>3. Fatiamento</h2>
+                <div class="form-group">
+                    <label>Peso Fatiado (Gramas) - Unitário</label>
+                    <input type="number" id="peso" placeholder="Ex: 320" oninput="calcular()">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tempo (Horas) - Unitário</label>
+                        <input type="number" id="horas" placeholder="Ex: 16" value="0" min="0" oninput="calcular()">
+                    </div>
+                    <div class="form-group">
+                        <label>Tempo (Minutos) - Unitário</label>
+                        <input type="number" id="minutos" placeholder="Ex: 30" value="0" min="0" max="59" oninput="calcular()">
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="altoRisco" onchange="calcular()">
+                    <div class="tooltip-container">
+                        Ativar Margem para Peça de Alto Risco <span class="tooltip-icon">?</span>
+                        <div class="tooltip-text">
+                            <strong>O que é:</strong> Adiciona 20% de peso e tempo extras no cálculo base.
+                        </div>
+                    </div>
+                </div>
+
+                <h2>4. Atacado e Estratégia</h2>
+                <div class="form-row" style="background-color: #2a2a2a; padding: 15px; border-radius: 8px; border: 1px solid var(--accent); margin-bottom: 15px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="color: var(--accent); font-weight: bold;">Qtd. do Lote (Unid.)</label>
+                        <input type="number" id="qtdLote" value="1" min="1" oninput="calcular()" style="background-color: #1e1e1e;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="color: var(--accent); font-weight: bold;">Desconto Atacado (%)</label>
+                        <input type="number" id="descontoLote" value="0" min="0" max="100" oninput="calcular()" style="background-color: #1e1e1e;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Multiplicador de Venda</label>
+                    <select id="multiplicador" onchange="calcular()">
+                        <option value="3">3x - Peça Crua (Padrão)</option>
+                        <option value="6">6x - Pintura Simples</option>
+                        <option value="7">7x - Pintura Detalhada</option>
+                        <option value="10">10x - Colecionável Premium</option>
+                        <option value="1">1x - Preço de Custo (Protótipo)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Taxas Extras Repassadas (Design, etc) - R$</label>
+                    <input type="number" id="taxaExtra" placeholder="Ex: 57.00" value="0" oninput="calcular()">
+                </div>
+            </div>
+
+            <!-- Painel de Resultados -->
+            <div class="card results">
+                <h2>Resumo do Orçamento <span id="labelLote" style="font-size:12px; color:var(--text-muted); font-weight:normal;"></span></h2>
+                <div class="result-item"><span>Custo do Material:</span><span class="result-value" id="resMaterial">R$ 0,00</span></div>
+                <div class="result-item"><span>Custo de Máquina/Energia:</span><span class="result-value" id="resMaquina">R$ 0,00</span></div>
+                <div class="result-item"><span>Custo Base (Fabricação):</span><span class="result-value" id="resBase">R$ 0,00</span></div>
+                <div class="result-item" style="border-bottom: 2px solid #333;"><span>Taxas Extras (Design/IA):</span><span class="result-value" id="resExtra">R$ 0,00</span></div>
+                
+                <div class="result-item" style="padding-bottom: 0;"><span>VALOR FINAL AO CLIENTE:</span><span class="result-value total-highlight" id="resFinal">R$ 0,00</span></div>
+                <div class="unit-price" id="resFinalUnitario" style="display:none;"></div>
+                
+                <div class="result-item" style="padding-bottom: 0;"><span>Lucro Líquido Estimado:</span><span class="result-value profit-highlight" id="resLucro">R$ 0,00</span></div>
+                <div class="unit-price" id="resLucroUnitario" style="display:none;"></div>
+
+                <div class="viabilidade-box" id="boxViabilidade">
+                    <div class="via-badge via-gray" id="badgeViabilidade">Aguardando Dados</div>
+                    <div class="via-text" id="textoViabilidade">Insira o tempo e os valores para analisar.</div>
+                </div>
+                
+                <button class="btn-salvar" id="btnSalvarGeral" onclick="salvarOrcamento()">💾 Salvar na Nuvem</button>
+                <button class="btn-cancelar" id="btnCancelarEdicao" onclick="cancelarEdicao()">❌ Cancelar Edição</button>
+            </div>
+        </div>
+
+        <!-- ABA 2: Galeria -->
+        <div id="tab-galeria" class="tab-content">
+            <div class="header-galeria">
+                <h2>📋 Galeria de Projetos Salvos</h2>
+                <div class="backup-controls">
+                    <button class="btn-backup" onclick="exportarBackup()">📥 Salvar Backup Offline</button>
+                    <input type="file" id="importArquivo" style="display:none" accept=".json" onchange="importarBackup(event)">
+                    <button class="btn-backup import" onclick="document.getElementById('importArquivo').click()">📤 Importar Backup Local</button>
+                </div>
+            </div>
+            <div class="search-container"><input type="text" id="pesquisaGaleria" placeholder="🔍 Pesquisar projeto pelo nome..." oninput="renderizarOrcamentos()"></div>
+            <div class="saved-grid" id="gridOrcamentos"></div>
+        </div>
+
+        <!-- ABA 3: Fila de Impressão e PDF -->
+        <div id="tab-fila" class="tab-content">
+            <div class="card">
+                <h2>Controles das Filas de Impressão</h2>
+                <p style="color: var(--text-muted); margin-bottom: 10px;">As peças são organizadas automaticamente pela máquina designada no orçamento original.</p>
+                <div class="form-group" style="max-width: 400px; margin-bottom: 25px;">
+                    <label>Nome do Cliente / Orçamento (Para o PDF)</label>
+                    <input type="text" id="nomeClienteFila" placeholder="Ex: João - Aniversário">
+                </div>
+                <div id="containerFilas"></div>
+                <div class="fila-totais" style="margin-top: 20px;">
+                    <button class="btn-pdf" onclick="gerarPDF()">🖨️ Gerar Orçamento (PDF)</button>
+                    <h3 id="textoTotalFila">Valor Total Geral: <span>R$ 0,00</span></h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 4: Fluxo de Caixa -->
+        <div id="tab-caixa" class="tab-content">
+            <div class="caixa-resumo-grid">
+                <div class="caixa-card"><h3>Total de Entradas</h3><div class="valor valor-entrada" id="caixaEntradas">R$ 0,00</div></div>
+                <div class="caixa-card"><h3>Total de Saídas</h3><div class="valor valor-saida" id="caixaSaidas">R$ 0,00</div></div>
+                <div class="caixa-card" style="border-color: var(--accent);"><h3 style="color: var(--text-main);">Saldo Atual</h3><div class="valor valor-saldo" id="caixaSaldo">R$ 0,00</div></div>
+            </div>
+            <div class="caixa-grafico-container"><canvas id="graficoCaixa"></canvas></div>
+
+            <div class="card" style="margin-bottom: 25px;">
+                <h2>Registrar Nova Movimentação</h2>
+                <div class="form-row">
+                    <div class="form-group"><label>Data</label><input type="date" id="caixaData"></div>
+                    <div class="form-group"><label>Tipo</label>
+                        <select id="caixaTipo">
+                            <option value="entrada">🟢 Entrada (Receita)</option>
+                            <option value="saida">🔴 Saída (Despesa)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Categoria</label>
+                        <select id="caixaCategoria" onchange="toggleCategoriaOutros()">
+                            <option value="Vendas">Vendas / Encomendas</option>
+                            <option value="Material">Material (Filamento, Resina)</option>
+                            <option value="Manutencao">Manutenção / Peças</option>
+                            <option value="Software">Software / IA / Modelos 3D</option>
+                            <option value="Outros">Outros...</option>
+                        </select>
+                        <input type="text" id="caixaCategoriaOutros" placeholder="Especifique a categoria..." style="display:none; margin-top: 10px;">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;"><label>Descrição do Lançamento</label><input type="text" id="caixaDesc" placeholder="Ex: Venda Lote Pateta"></div>
+                    <div class="form-group"><label>Valor (R$)</label><input type="number" id="caixaValor" step="0.01" placeholder="0.00"></div>
+                </div>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>Anexar Comprovante / Nota Fiscal (Opcional - Formatos de imagem)</label>
+                    <input type="file" id="caixaAnexo" accept="image/*" onchange="processarAnexoCaixa(event)">
+                </div>
+                <button class="btn-salvar" style="background-color: var(--info); margin-top: 15px;" onclick="adicionarCaixa()">Salvar no Caixa</button>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px;">
+                    <h2 style="border: none; padding: 0; margin: 0;">Histórico de Lançamentos</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-backup excel" onclick="exportarCaixaExcel()">📥 Exportar Excel (CSV)</button>
+                        <input type="file" id="importCaixaArquivo" style="display:none" accept=".csv" onchange="importarCaixaExcel(event)">
+                        <button class="btn-backup" onclick="document.getElementById('importCaixaArquivo').click()">📤 Importar CSV</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="batch-table">
+                        <thead>
+                            <tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th style="text-align:center;">NF</th><th>Ação</th></tr>
+                        </thead>
+                        <tbody id="tabelaCaixa"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 5: Ajuda -->
+        <div id="tab-ajuda" class="tab-content">
+            <div class="card">
+                <h2>Entendendo a Matemática</h2>
+                <p style="color: var(--text-muted); margin-bottom: 25px;">Aqui estão as fórmulas exatas que o sistema utiliza para precificar as suas impressões e garantir que a CiA Collectibles 3D tenha sempre um lucro saudável.</p>
+
+                <div class="help-section">
+                    <h3>1. Custo do Material</h3>
+                    <p style="margin: 0; font-size: 15px;">Calcula o valor exato gasto do filamento com base no peso da peça e no preço pago pelo carretel de 1kg.</p>
+                    <div class="formula-box">Fórmula: Peso (g) × (Preço do Kg ÷ 1000)</div>
+                </div>
+
+                <div class="help-section">
+                    <h3>2. Custo de Máquina (Energia e Depreciação)</h3>
+                    <p style="margin: 0; font-size: 15px;">O sistema converte o tempo (horas e minutos) em um valor decimal e multiplica pelo custo da hora daquela máquina. Esse valor cobre sua energia elétrica, troca de bicos/peças e a depreciação do equipamento.</p>
+                    <div class="formula-box">Fórmula: (Horas + (Minutos ÷ 60)) × Valor da Hora-Máquina</div>
+                </div>
+
+                <div class="help-section">
+                    <h3>3. Margem de Alto Risco</h3>
+                    <p style="margin: 0; font-size: 15px;">Se você marcar a caixa "Alto Risco", o sistema adiciona automaticamente 20% no Peso e 20% no Tempo ANTES de iniciar qualquer cálculo. Isso eleva o valor final e cria um "fundo de reserva" invisível para cobrir falhas e perda de material.</p>
+                    <div class="formula-box">Fórmula: Novo Peso = (Peso × 1.20) | Novo Tempo = (Tempo Total × 1.20)</div>
+                </div>
+
+                <div class="help-section">
+                    <h3>4. Valor Final ao Cliente</h3>
+                    <p style="margin: 0; font-size: 15px;">Aplica a estratégia comercial do seu negócio. Ele soma o Custo do Material e da Máquina (que compõem o Custo Base) e multiplica isso pela margem desejada (ex: 3x). Por fim, ele aplica eventuais descontos de atacado e soma as taxas extras terceirizadas.</p>
+                    <div class="formula-box">Fórmula: [((Custo Material + Custo Máquina) × Multiplicador) × (1 - Desconto)] + Taxas Extras</div>
+                </div>
+
+                <div class="help-section">
+                    <h3>5. Lucro Líquido Estimado</h3>
+                    <p style="margin: 0; font-size: 15px;">É o dinheiro que vai limpo para o caixa da loja, depois de subtrair o gasto com material, a energia, a depreciação da máquina e o que você pagou a terceiros (como design e IA).</p>
+                    <div class="formula-box">Fórmula: Valor Final - Custo Base - Taxas Extras</div>
+                </div>
+
+                <div class="help-section">
+                    <h3>6. Termômetro de Viabilidade</h3>
+                    <p style="margin: 0; font-size: 15px;">Mede quanto a sua máquina está rendendo de <strong>lucro limpo por hora</strong>. Essa é a métrica mais importante para evitar que a máquina fique rodando muito tempo para um retorno financeiro pequeno.</p>
+                    <div class="formula-box">Fórmula: Lucro Líquido Total ÷ Tempo Total de Impressão (em horas decimais)</div>
+                    <ul style="color: var(--text-muted); font-size: 15px; margin-top: 15px; line-height: 1.6;">
+                        <li><strong style="color: var(--danger);">🔴 Baixa Viabilidade:</strong> Rende menos de R$ 2,50 por hora.</li>
+                        <li><strong style="color: var(--warning);">🟡 Viabilidade Padrão:</strong> Rende entre R$ 2,50 e R$ 6,00 por hora.</li>
+                        <li><strong style="color: var(--success);">🟢 Alta Viabilidade:</strong> Rende mais de R$ 6,00 por hora.</li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO DO FIREBASE (NUVEM) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBZMr_GRB_hw_mfFvUmK5tEeMRbi41kHoM",
+            authDomain: "cia-collectibles-3d.firebaseapp.com",
+            databaseURL: "https://cia-collectibles-3d-default-rtdb.firebaseio.com",
+            projectId: "cia-collectibles-3d",
+            storageBucket: "cia-collectibles-3d.firebasestorage.app",
+            messagingSenderId: "568358095913",
+            appId: "1:568358095913:web:e1f8ec2d94fbac54ae2038"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Variáveis de Estado
+        window.valoresAtuais = {};
+        window.imagemBase64Atual = null;
+        window.anexoCaixaBase64 = null; 
+        window.filaItens = []; 
+        window.idEditando = null; 
+        
+        window.impressoras = [];
+        window.orcamentosSalvos = [];
+        window.fluxoCaixa = [];
+        window.graficoChartJS = null;
+
+        // Monitoramento da Conexão
+        const connectedRef = db.ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+            const led = document.getElementById("ledStatus");
+            const txt = document.getElementById("textoStatus");
+            if (snap.val() === true) {
+                led.className = "led-online";
+                txt.innerText = "Nuvem Sincronizada";
+            } else {
+                led.className = "led-offline";
+                txt.innerText = "Offline";
+            }
+        });
+
+        // --- SINCRONIZAÇÃO EM TEMPO REAL ---
+        
+        // 1. Ouvinte de Impressoras
+        db.ref('impressoras').on('value', snap => {
+            const data = snap.val();
+            if(data) {
+                window.impressoras = Object.values(data);
+            } else {
+                window.impressoras = [
+                    { id: 1, nome: "Ender 3 V3 SE", valor: 1.50 },
+                    { id: 2, nome: "Flashforge AD5X", valor: 2.50 }
+                ];
+                window.impressoras.forEach(imp => db.ref('impressoras/' + imp.id).set(imp));
+            }
+            carregarImpressoras(); 
+            calcular();
+        });
+
+        // 2. Ouvinte de Orçamentos da Galeria
+        db.ref('orcamentos').on('value', snap => {
+            const data = snap.val();
+            window.orcamentosSalvos = data ? Object.values(data).sort((a, b) => b.id - a.id) : [];
+            renderizarOrcamentos();
+        });
+
+        // 3. Ouvinte do Fluxo de Caixa
+        db.ref('caixa').on('value', snap => {
+            const data = snap.val();
+            window.fluxoCaixa = data ? Object.values(data).sort((a, b) => b.id - a.id) : [];
+            renderizarCaixa();
+        });
+
+
+        // Funções Base
+        function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+        function abrirAba(abaId) {
+            document.querySelectorAll('.tab-content').forEach(aba => aba.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (abaId === 'tab-orcamento') { document.getElementById(abaId).style.display = 'grid'; } 
+            else { document.getElementById(abaId).style.display = 'block'; }
+            document.getElementById('btn-' + abaId).classList.add('active');
+            if (abaId === 'tab-caixa') { renderizarCaixa(); if(document.getElementById('caixaData').value === '') { document.getElementById('caixaData').valueAsDate = new Date(); } }
+        }
+
+        function carregarImpressoras() {
+            const select = document.getElementById('impressora'); 
+            const valorAtual = select.value;
+            select.innerHTML = '';
+            window.impressoras.forEach(imp => { select.innerHTML += `<option value="${imp.valor}" data-nome="${imp.nome}">${imp.nome} (R$ ${imp.valor.toFixed(2).replace('.',',')}/h)</option>`; });
+            if(valorAtual && [...select.options].some(o => o.value === valorAtual)) { select.value = valorAtual; }
+        }
+
+        function adicionarImpressoraNova() {
+            const nome = prompt("Digite o nome da nova impressora:"); if (!nome) return;
+            const valorStr = prompt("Custo da hora-máquina (Ex: 3.50):"); if (!valorStr) return;
+            const valor = parseFloat(valorStr.replace(',', '.'));
+            if (isNaN(valor)) { alert("Valor inválido."); return; }
+            
+            const novaImp = { id: Date.now(), nome: nome, valor: valor };
+            db.ref('impressoras/' + novaImp.id).set(novaImp);
+        }
+
+        function processarImagem(evento) {
+            const file = evento.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas'); const t = 400; let w = img.width; let h = img.height;
+                    if (w > h && w > t) { h *= t / w; w = t; } else if (h > t) { w *= t / h; h = t; }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                    window.imagemBase64Atual = canvas.toDataURL('image/jpeg', 0.7); 
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function calcular() {
+            const precoFilamentoKg = parseFloat(document.getElementById('precoFilamento').value) || 0;
+            const impressoraSelect = document.getElementById('impressora');
+            if (impressoraSelect.options.length === 0) return;
+            
+            const precoHoraMaquina = parseFloat(impressoraSelect.value) || 0;
+            const nomeMaquina = impressoraSelect.options[impressoraSelect.selectedIndex].getAttribute('data-nome');
+            
+            let pesoUnitario = parseFloat(document.getElementById('peso').value) || 0;
+            let horasUnit = parseFloat(document.getElementById('horas').value) || 0;
+            let minutosUnit = parseFloat(document.getElementById('minutos').value) || 0;
+            
+            const multiplicador = parseFloat(document.getElementById('multiplicador').value) || 3;
+            const taxaExtra = parseFloat(document.getElementById('taxaExtra').value) || 0;
+            const altoRisco = document.getElementById('altoRisco').checked;
+
+            const qtdLote = parseInt(document.getElementById('qtdLote').value) || 1;
+            const descontoLote = parseFloat(document.getElementById('descontoLote').value) || 0;
+
+            let tempoDecUnit = horasUnit + (minutosUnit / 60);
+            let tempoCalcUnit = tempoDecUnit;
+
+            if (altoRisco) { pesoUnitario *= 1.2; tempoCalcUnit *= 1.2; }
+
+            const pesoTotalLote = pesoUnitario * qtdLote;
+            const tempoTotalLote = tempoCalcUnit * qtdLote;
+
+            const custoMatTotal = pesoTotalLote * (precoFilamentoKg / 1000);
+            const custoMaqTotal = tempoTotalLote * precoHoraMaquina;
+            const custoBaseTotal = custoMatTotal + custoMaqTotal;
+
+            const valorVendaBruto = custoBaseTotal * multiplicador;
+            const valorComDesconto = valorVendaBruto - (valorVendaBruto * (descontoLote / 100));
+            const valorFinal = valorComDesconto + taxaExtra;
+            const lucroLiquido = valorFinal - custoBaseTotal - taxaExtra;
+
+            let statusVia = "gray"; let tagVia = "Aguardando";
+            if (tempoTotalLote > 0) {
+                const lHora = lucroLiquido / tempoTotalLote;
+                const b = document.getElementById('badgeViabilidade'); const txt = document.getElementById('textoViabilidade');
+                if (lHora < 2.5) { b.className = "via-badge via-red"; b.innerHTML = "🔴 Baixa Viabilidade"; txt.innerHTML = `Lucro: ${formatarMoeda(lHora)}/h.`; statusVia = "red"; tagVia = "Baixa"; } 
+                else if (lHora <= 6.0) { b.className = "via-badge via-yellow"; b.innerHTML = "🟡 Viabilidade Padrão"; txt.innerHTML = `Lucro: ${formatarMoeda(lHora)}/h.`; statusVia = "yellow"; tagVia = "Padrão"; } 
+                else { b.className = "via-badge via-green"; b.innerHTML = "🟢 Alta Viabilidade"; txt.innerHTML = `Lucro: ${formatarMoeda(lHora)}/h.`; statusVia = "green"; tagVia = "Alta"; }
+            }
+
+            document.getElementById('labelLote').innerText = qtdLote > 1 ? `(Lote de ${qtdLote} peças)` : '';
+            document.getElementById('resMaterial').textContent = formatarMoeda(custoMatTotal);
+            document.getElementById('resMaquina').textContent = formatarMoeda(custoMaqTotal);
+            document.getElementById('resBase').textContent = formatarMoeda(custoBaseTotal);
+            document.getElementById('resExtra').textContent = formatarMoeda(taxaExtra);
+            document.getElementById('resFinal').textContent = formatarMoeda(valorFinal);
+            document.getElementById('resLucro').textContent = formatarMoeda(lucroLiquido);
+
+            const elUnitFinal = document.getElementById('resFinalUnitario');
+            const elUnitLucro = document.getElementById('resLucroUnitario');
+            if(qtdLote > 1) {
+                elUnitFinal.style.display = "block"; elUnitFinal.innerText = `(Valor por unidade: ${formatarMoeda(valorFinal / qtdLote)})`;
+                elUnitLucro.style.display = "block"; elUnitLucro.innerText = `(Lucro por unidade: ${formatarMoeda(lucroLiquido / qtdLote)})`;
+            } else {
+                elUnitFinal.style.display = "none"; elUnitLucro.style.display = "none";
+            }
+
+            window.valoresAtuais = {
+                peso: pesoUnitario.toFixed(0), tempo: `${horasUnit}h ${minutosUnit}m`, custoBase: formatarMoeda(custoBaseTotal),
+                valorFinal: formatarMoeda(valorFinal), valorFinalRaw: valorFinal, lucro: formatarMoeda(lucroLiquido),
+                statusVia: statusVia, tagVia: tagVia, maquinaNome: nomeMaquina, qtdLote: qtdLote,
+                raw: { peso: document.getElementById('peso').value, horas: document.getElementById('horas').value, minutos: document.getElementById('minutos').value, precoFilamento: document.getElementById('precoFilamento').value, impressora: impressoraSelect.value, multiplicador: document.getElementById('multiplicador').value, taxaExtra: document.getElementById('taxaExtra').value, altoRisco: document.getElementById('altoRisco').checked, qtdLote: document.getElementById('qtdLote').value, descontoLote: document.getElementById('descontoLote').value }
+            };
+        }
+
+        function salvarOrcamento() {
+            const n = document.getElementById('nomePeca').value.trim();
+            if (!n) { alert("Digite o Nome do Projeto."); return; }
+
+            if (window.idEditando) {
+                const objAtualizado = { id: window.idEditando, nome: n, data: new Date().toLocaleDateString('pt-BR'), imagem: window.imagemBase64Atual, dados: window.valoresAtuais };
+                db.ref('orcamentos/' + window.idEditando).set(objAtualizado).then(() => {
+                    cancelarEdicao(true);
+                });
+            } else {
+                const novoId = Date.now();
+                const novoObj = { id: novoId, nome: n, data: new Date().toLocaleDateString('pt-BR'), imagem: window.imagemBase64Atual, dados: window.valoresAtuais };
+                db.ref('orcamentos/' + novoId).set(novoObj).then(() => {
+                    cancelarEdicao(true);
+                });
+            }
+        }
+
+        function editarOrcamento(id) {
+            let o = window.orcamentosSalvos.find(x => x.id === id); if (!o) return;
+            window.idEditando = id; document.getElementById('nomePeca').value = o.nome; window.imagemBase64Atual = o.imagem || null;
+            document.getElementById('avisoImagem').style.display = o.imagem ? 'block' : 'none';
+            if (o.dados.raw) {
+                document.getElementById('precoFilamento').value = o.dados.raw.precoFilamento; document.getElementById('impressora').value = o.dados.raw.impressora; document.getElementById('peso').value = o.dados.raw.peso; document.getElementById('horas').value = o.dados.raw.horas; document.getElementById('minutos').value = o.dados.raw.minutos; document.getElementById('multiplicador').value = o.dados.raw.multiplicador; document.getElementById('taxaExtra').value = o.dados.raw.taxaExtra; document.getElementById('altoRisco').checked = o.dados.raw.altoRisco;
+                document.getElementById('qtdLote').value = o.dados.raw.qtdLote || 1; document.getElementById('descontoLote').value = o.dados.raw.descontoLote || 0;
+            }
+            document.getElementById('btnSalvarGeral').innerHTML = "🔄 Atualizar na Nuvem"; document.getElementById('btnCancelarEdicao').style.display = "block";
+            calcular(); abrirAba('tab-orcamento');
+        }
+
+        function cancelarEdicao(voltar = true) {
+            window.idEditando = null; document.getElementById('nomePeca').value = ''; document.getElementById('fotoPeca').value = ''; document.getElementById('avisoImagem').style.display = 'none'; window.imagemBase64Atual = null;
+            document.getElementById('btnSalvarGeral').innerHTML = "💾 Salvar na Nuvem"; document.getElementById('btnCancelarEdicao').style.display = "none";
+            document.getElementById('peso').value = ''; document.getElementById('horas').value = '0'; document.getElementById('minutos').value = '0'; document.getElementById('taxaExtra').value = '0'; document.getElementById('altoRisco').checked = false;
+            document.getElementById('qtdLote').value = '1'; document.getElementById('descontoLote').value = '0';
+            calcular(); if (voltar) abrirAba('tab-galeria');
+        }
+
+        function excluirOrcamento(id) {
+            if (confirm("Apagar orçamento da nuvem?")) { db.ref('orcamentos/' + id).remove(); }
+        }
+
+        function adicionarAFila(orcId) {
+            let o = window.orcamentosSalvos.find(x => x.id === orcId);
+            if (o) {
+                let q = parseInt(document.getElementById(`qtd-${o.id}`).value) || 1;
+                let v = o.dados.valorFinalRaw !== undefined ? o.dados.valorFinalRaw : parseFloat(o.dados.valorFinal.replace(/[^0-9,-]+/g,"").replace(",","."));
+                window.filaItens.push({ filaId: Date.now() + Math.random(), nome: o.nome, maquina: o.dados.maquinaNome || 'Padrão', qtd: q, valorUnit: v, subtotal: v * q });
+                renderizarFila();
+                const btn = document.getElementById(`btn-fila-${o.id}`); const txt = btn.innerHTML;
+                btn.innerHTML = "✅"; btn.style.backgroundColor = "var(--success)";
+                setTimeout(() => { btn.innerHTML = txt; btn.style.backgroundColor = "var(--info)"; document.getElementById(`qtd-${o.id}`).value = 1; }, 1000);
+            }
+        }
+
+        function removerDaFila(fId) { window.filaItens = window.filaItens.filter(i => i.filaId !== fId); renderizarFila(); }
+
+        function renderizarFila() {
+            const c = document.getElementById('containerFilas'); c.innerHTML = ''; document.getElementById('badge-fila').innerText = window.filaItens.length;
+            if (window.filaItens.length === 0) { c.innerHTML = '<div class="empty-state">A fila está vazia.</div>'; document.getElementById('textoTotalFila').innerHTML = `Valor Total Geral: <span>R$ 0,00</span>`; return; }
+
+            const mqs = [...new Set(window.filaItens.map(i => i.maquina))]; let total = 0;
+            mqs.forEach(mq => {
+                const itens = window.filaItens.filter(i => i.maquina === mq); let sub = 0;
+                let h = `<div style="background: #2a2a2a; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 25px; overflow: hidden;"><h3 style="background: var(--accent); color: white; margin: 0; padding: 12px 15px; font-size: 16px;">🖨️ Fila: ${mq}</h3><div class="table-responsive" style="margin-bottom: 0;"><table class="batch-table"><thead><tr><th>Qtd</th><th>Peça</th><th>V. Unit.</th><th>Subtotal</th><th>Ação</th></tr></thead><tbody>`;
+                itens.forEach(i => { sub += i.subtotal; total += i.subtotal; h += `<tr><td>${i.qtd}x</td><td>${i.nome}</td><td>${formatarMoeda(i.valorUnit)}</td><td><strong>${formatarMoeda(i.subtotal)}</strong></td><td><button class="btn-remove-fila" onclick="removerDaFila(${i.filaId})">X</button></td></tr>`; });
+                h += `</tbody></table></div><div style="padding: 15px; text-align: right; background: #1e1e1e;">Subtotal desta Máquina: <strong style="color: var(--accent); font-size: 18px;">${formatarMoeda(sub)}</strong></div></div>`;
+                c.innerHTML += h;
+            });
+            document.getElementById('textoTotalFila').innerHTML = `Valor Total Geral: <span>${formatarMoeda(total)}</span>`;
+        }
+        
+        function gerarPDF() {
+            if(window.filaItens.length === 0) { alert("Fila vazia."); return; }
+            document.getElementById('invData').innerText = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('invCliente').innerText = `Projeto / Cliente: ${document.getElementById('nomeClienteFila').value || 'Não informado'}`;
+            const tb = document.getElementById('invTabela'); tb.innerHTML = ''; let t = 0;
+            window.filaItens.forEach(i => { t += i.subtotal; tb.innerHTML += `<tr><td>${i.qtd}</td><td>${i.nome}</td><td>${formatarMoeda(i.valorUnit)}</td><td>${formatarMoeda(i.subtotal)}</td></tr>`; });
+            document.getElementById('invTotal').innerText = formatarMoeda(t);
+            window.print();
+        }
+
+        function renderizarOrcamentos() {
+            const g = document.getElementById('gridOrcamentos'); 
+            let orcs = window.orcamentosSalvos;
+            const b = document.getElementById('pesquisaGaleria') ? document.getElementById('pesquisaGaleria').value.toLowerCase() : "";
+            if (b) orcs = orcs.filter(o => o.nome.toLowerCase().includes(b));
+            g.innerHTML = '';
+            if (orcs.length === 0) { g.innerHTML = '<div class="empty-state">Nenhum projeto encontrado.</div>'; return; }
+
+            orcs.forEach(o => {
+                const img = o.imagem ? `<img src="${o.imagem}" class="saved-card-img">` : `<div class="saved-card-img">Sem Foto</div>`;
+                const mq = o.dados.maquinaNome ? `<div class="saved-detail"><span style="color: var(--text-muted)">Máquina:</span><span>${o.dados.maquinaNome}</span></div>` : "";
+                const lblLote = o.dados.qtdLote > 1 ? `<span style="font-size:12px; color:var(--text-muted); font-weight:normal;"> (Lote c/ ${o.dados.qtdLote})</span>` : "";
+                
+                g.innerHTML += `<div class="saved-card">${img}<div class="saved-card-content"><h3 class="saved-title">${o.nome} ${lblLote} <span class="via-minitag ${o.dados.statusVia || 'gray'}">${o.dados.tagVia || 'N/A'}</span></h3><div class="saved-detail"><span style="color: var(--text-muted)">Data:</span><span>${o.data}</span></div>${mq}<div class="saved-detail"><span style="color: var(--text-muted)">Peso/Tempo (Unit):</span><span>${o.dados.peso}g / ${o.dados.tempo}</span></div><div class="saved-detail saved-total"><span>Valor do Projeto:</span><span style="color: var(--accent)">${o.dados.valorFinal}</span></div><div style="display: flex; gap: 10px; margin-top: 15px;"><input type="number" id="qtd-${o.id}" value="1" min="1" style="width: 70px; padding: 8px; text-align: center;"><button id="btn-fila-${o.id}" style="flex: 1; background: var(--info); color: white; border: none; border-radius: 4px; font-weight: bold; cursor:pointer;" onclick="adicionarAFila(${o.id})">+ Fila</button></div><div class="action-grid"><button class="btn-editar" onclick="editarOrcamento(${o.id})">✏️ Editar</button><button class="btn-excluir" onclick="excluirOrcamento(${o.id})">🗑️ Excluir</button></div></div></div>`;
+            });
+        }
+
+        // --- SISTEMA DE FLUXO DE CAIXA ---
+
+        function toggleCategoriaOutros() {
+            const val = document.getElementById('caixaCategoria').value;
+            document.getElementById('caixaCategoriaOutros').style.display = (val === 'Outros') ? 'block' : 'none';
+        }
+
+        function processarAnexoCaixa(evento) {
+            const file = evento.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas'); const t = 800; let w = img.width; let h = img.height;
+                    if (w > h && w > t) { h *= t / w; w = t; } else if (h > t) { w *= t / h; h = t; }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                    window.anexoCaixaBase64 = canvas.toDataURL('image/jpeg', 0.7); 
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function abrirModalAnexo(id) {
+            const t = window.fluxoCaixa.find(x => x.id == id);
+            if(t && t.anexo) {
+                document.getElementById('imgModalAnexo').src = t.anexo;
+                document.getElementById('modalAnexo').style.display = 'flex';
+            }
+        }
+
+        function adicionarCaixa() {
+            const data = document.getElementById('caixaData').value;
+            const tipo = document.getElementById('caixaTipo').value;
+            let categoria = document.getElementById('caixaCategoria').value;
+            const desc = document.getElementById('caixaDesc').value.trim() || "Lançamento Padrão";
+            const valor = parseFloat(document.getElementById('caixaValor').value);
+            if (categoria === 'Outros') { categoria = document.getElementById('caixaCategoriaOutros').value.trim() || 'Outros (Não Especificado)'; }
+            if (!data || isNaN(valor) || valor <= 0) { alert("Preencha a data e um valor válido."); return; }
+
+            const transacao = { id: Date.now(), data, tipo, categoria, descricao: desc, valor, anexo: window.anexoCaixaBase64 };
+            db.ref('caixa/' + transacao.id).set(transacao).then(() => {
+                document.getElementById('caixaDesc').value = ''; document.getElementById('caixaValor').value = ''; document.getElementById('caixaAnexo').value = ''; document.getElementById('caixaCategoriaOutros').value = ''; window.anexoCaixaBase64 = null;
+            });
+        }
+
+        function removerCaixa(id) {
+            if (confirm("Apagar este lançamento da nuvem?")) { db.ref('caixa/' + id).remove(); }
+        }
+
+        function renderizarCaixa() {
+            const tb = document.getElementById('tabelaCaixa'); tb.innerHTML = ''; let totalIn = 0; let totalOut = 0;
+            if (window.fluxoCaixa.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento registrado.</td></tr>'; } else {
+                window.fluxoCaixa.forEach(t => {
+                    if (t.tipo === 'entrada') totalIn += t.valor; else totalOut += t.valor;
+                    const corTipo = t.tipo === 'entrada' ? 'bg-entrada' : 'bg-saida'; const txtTipo = t.tipo === 'entrada' ? 'Entrada' : 'Saída'; const dataFormatada = t.data.split('-').reverse().join('/'); const btnAnexo = t.anexo ? `<button class="btn-doc" onclick="abrirModalAnexo('${t.id}')">📄</button>` : `<span style="color:#555">-</span>`;
+                    tb.innerHTML += `<tr><td>${dataFormatada}</td><td><span class="badge-tipo ${corTipo}">${txtTipo}</span></td><td>${t.categoria}</td><td>${t.descricao}</td><td style="font-weight:bold; color: var(--${t.tipo === 'entrada' ? 'success' : 'danger'})">${formatarMoeda(t.valor)}</td><td style="text-align:center;">${btnAnexo}</td><td><button class="btn-remove-fila" onclick="removerCaixa(${t.id})">X</button></td></tr>`;
+                });
+            }
+            const saldo = totalIn - totalOut;
+            document.getElementById('caixaEntradas').innerText = formatarMoeda(totalIn); document.getElementById('caixaSaidas').innerText = formatarMoeda(totalOut); document.getElementById('caixaSaldo').innerText = formatarMoeda(saldo); document.getElementById('caixaSaldo').style.color = saldo >= 0 ? "var(--accent)" : "var(--danger)";
+            renderizarGraficoCaixa();
+        }
+
+        function renderizarGraficoCaixa() {
+            if (typeof Chart === 'undefined') return; 
+            const ctx = document.getElementById('graficoCaixa').getContext('2d'); const meses = {};
+            [...window.fluxoCaixa].reverse().forEach(t => {
+                const mesAno = t.data.substring(0, 7); 
+                if (!meses[mesAno]) meses[mesAno] = { in: 0, out: 0 };
+                if (t.tipo === 'entrada') meses[mesAno].in += t.valor; else meses[mesAno].out += t.valor;
+            });
+            const labels = Object.keys(meses).map(m => { const [ano, mes] = m.split('-'); return `${mes}/${ano}`; });
+            const dataIn = Object.values(meses).map(m => m.in); const dataOut = Object.values(meses).map(m => m.out);
+            if (window.graficoChartJS) window.graficoChartJS.destroy();
+            window.graficoChartJS = new Chart(ctx, { type: 'bar', data: { labels: labels.length > 0 ? labels : ['Sem Dados'], datasets: [ { label: 'Entradas', data: dataIn.length > 0 ? dataIn : [0], backgroundColor: '#00cc66', borderRadius: 4 }, { label: 'Saídas', data: dataOut.length > 0 ? dataOut : [0], backgroundColor: '#ff4444', borderRadius: 4 } ] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ffffff' } } }, scales: { y: { ticks: { color: '#aaaaaa' }, grid: { color: '#333333' } }, x: { ticks: { color: '#aaaaaa' }, grid: { color: '#333333' } } } } });
+        }
+
+        function exportarCaixaExcel() {
+            if (window.fluxoCaixa.length === 0) { alert("Caixa vazio."); return; }
+            let csv = "ID;Data;Tipo;Categoria;Descricao;Valor;Possui_Anexo\n";
+            window.fluxoCaixa.forEach(t => { let valorBR = t.valor.toFixed(2).replace('.', ','); let temAnexo = t.anexo ? "Sim" : "Nao"; csv += `${t.id};${t.data};${t.tipo};${t.categoria};${t.descricao};${valorBR};${temAnexo}\n`; });
+            const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }); const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", `FluxoCaixa_CiA_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`); link.click();
+        }
+
+        function importarCaixaExcel(evento) {
+            const file = evento.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result; const linhas = text.split("\n");
+                try {
+                    for (let i = 1; i < linhas.length; i++) {
+                        if (linhas[i].trim() === "") continue; const colunas = linhas[i].split(";");
+                        if(colunas.length >= 6) { 
+                            const t = { id: parseInt(colunas[0]) || Date.now() + i, data: colunas[1], tipo: colunas[2], categoria: colunas[3], descricao: colunas[4], valor: parseFloat(colunas[5].replace(',', '.')) };
+                            db.ref('caixa/' + t.id).set(t);
+                        }
+                    }
+                    alert("Planilha enviada para a Nuvem com sucesso!");
+                } catch(err) { alert("Erro ao ler o arquivo CSV."); }
+            };
+            reader.readAsText(file); evento.target.value = ''; 
+        }
+
+        function exportarBackup() {
+            const backupCompleto = { orcamentos: window.orcamentosSalvos, caixa: window.fluxoCaixa, impressoras: window.impressoras };
+            const blob = new Blob([JSON.stringify(backupCompleto)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `BackupGeral_CiA_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`; a.click(); URL.revokeObjectURL(url);
+        }
+
+        function importarBackup(evento) {
+            const arq = evento.target.files[0]; if (!arq) return;
+            const r = new FileReader();
+            r.onload = function(e) {
+                try {
+                    const obj = JSON.parse(e.target.result);
+                    if (confirm("Atenção: Isso enviará todo o arquivo de backup local para a NUVEM. Os dados de todos os dispositivos serão atualizados. Continuar?")) {
+                        if(obj.orcamentos) obj.orcamentos.forEach(o => db.ref('orcamentos/' + o.id).set(o));
+                        if(obj.caixa) obj.caixa.forEach(c => db.ref('caixa/' + c.id).set(c));
+                        if(obj.impressoras) obj.impressoras.forEach(i => db.ref('impressoras/' + i.id).set(i));
+                        alert("Backup carregado para a Nuvem com sucesso!");
+                    }
+                } catch(err) { alert("Arquivo de backup inválido."); }
+            };
+            r.readAsText(arq); evento.target.value = '';
+        }
+
+        // Inicialização Local antes da Nuvem
+        carregarImpressoras(); calcular();
+    </script>
+</body>
+</html>
