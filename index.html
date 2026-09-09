@@ -51,9 +51,8 @@
         .logo-img { max-width: 180px; height: auto; display: block; margin: 0 auto; }
         .header-title p { color: var(--text-muted); margin-top: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Melhorias de Navegação Mobile nas Abas */
         .tab-nav { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; justify-content: flex-start; }
-        .tab-nav::-webkit-scrollbar { display: none; } /* Ocultar barra de rolagem no mobile */
+        .tab-nav::-webkit-scrollbar { display: none; }
         
         .tab-btn { background-color: var(--tab-bg); color: var(--text-main); border: 1px solid var(--border); padding: 10px 16px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
         .tab-btn:hover { background-color: #333; }
@@ -406,7 +405,7 @@
             </div>
         </div>
 
-        <!-- ABA 4: Fluxo de Caixa (Com Seção Separada de Entradas e Saídas solicitada) -->
+        <!-- ABA 4: Fluxo de Caixa (Com filtros de Entrada/Saída e Filtro por Mês) -->
         <div id="tab-caixa" class="tab-content">
             <div class="caixa-resumo-grid">
                 <div class="caixa-card"><h3>Entradas</h3><div class="valor valor-entrada" id="caixaEntradas">R$ 0,00</div></div>
@@ -457,11 +456,18 @@
                     </div>
                 </div>
 
-                <!-- Botões para ver separadamente Entrada ou Saída (Solicitado pelo usuário) -->
-                <div style="display: flex; gap: 6px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <button class="tab-btn active" id="filtro-caixa-todos" onclick="filtrarCaixa('todos')" style="padding: 6px 12px; font-size: 13px;">Todos</button>
-                    <button class="tab-btn" id="filtro-caixa-entrada" onclick="filtrarCaixa('entrada')" style="padding: 6px 12px; font-size: 13px;">🟢 Apenas Entradas</button>
-                    <button class="tab-btn" id="filtro-caixa-saida" onclick="filtrarCaixa('saida')" style="padding: 6px 12px; font-size: 13px;">🔴 Apenas Saídas</button>
+                <!-- Filtros combinados: Tipo de Movimento e Seletor de Mês -->
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center;">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button class="tab-btn active" id="filtro-caixa-todos" onclick="filtrarCaixa('todos')" style="padding: 6px 12px; font-size: 13px;">Todos</button>
+                        <button class="tab-btn" id="filtro-caixa-entrada" onclick="filtrarCaixa('entrada')" style="padding: 6px 12px; font-size: 13px;">🟢 Entradas</button>
+                        <button class="tab-btn" id="filtro-caixa-saida" onclick="filtrarCaixa('saida')" style="padding: 6px 12px; font-size: 13px;">🔴 Saídas</button>
+                    </div>
+                    <div style="flex-grow: 1; min-width: 160px;">
+                        <select id="filtroMesCaixa" onchange="renderizarCaixa()" style="padding: 7px 10px; font-size: 13px; height: auto;">
+                            <option value="todos">📅 Todos os Meses</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -538,7 +544,7 @@
         window.anexoCaixaBase64 = null; 
         window.filaItens = []; 
         window.idEditando = null; 
-        window.filtroCaixaAtual = 'todos'; // Variável para controlar o filtro de entradas/saídas
+        window.filtroCaixaAtual = 'todos'; 
         
         window.impressoras = [];
         window.orcamentosSalvos = [];
@@ -839,7 +845,7 @@
             });
         }
 
-        // --- FLUXO DE CAIXA E FILTROS ---
+        // --- FLUXO DE CAIXA E FILTROS (TIPO + MÊS) ---
 
         function toggleCategoriaOutros() {
             const val = document.getElementById('caixaCategoria').value;
@@ -904,14 +910,31 @@
                 if (t.tipo === 'entrada') totalIn += t.valor; else totalOut += t.valor;
             });
 
-            // Aplicação do filtro escolhido pelo usuário (Todos, Apenas Entradas, Apenas Saídas)
+            // Gerenciamento e população do seletor de meses dinamicamente
+            const selectMes = document.getElementById('filtroMesCaixa');
+            const mesSelecionado = selectMes ? selectMes.value : 'todos';
+            const mesesDisponiveis = [...new Set(window.fluxoCaixa.map(t => t.data.substring(0, 7)))].sort().reverse();
+            
+            if (selectMes) {
+                let optionsHtml = '<option value="todos">📅 Todos os Meses</option>';
+                mesesDisponiveis.forEach(m => {
+                    const [ano, mes] = m.split('-');
+                    optionsHtml += `<option value="${m}" ${mesSelecionado === m ? 'selected' : ''}>${mes}/${ano}</option>`;
+                });
+                selectMes.innerHTML = optionsHtml;
+            }
+
+            // Filtragem combinada por tipo e por mês
             let itensExibicao = window.fluxoCaixa;
             if (window.filtroCaixaAtual !== 'todos') {
-                itensExibicao = window.fluxoCaixa.filter(t => t.tipo === window.filtroCaixaAtual);
+                itensExibicao = itensExibicao.filter(t => t.tipo === window.filtroCaixaAtual);
+            }
+            if (mesSelecionado && mesSelecionado !== 'todos') {
+                itensExibicao = itensExibicao.filter(t => t.data.substring(0, 7) === mesSelecionado);
             }
 
             if (itensExibicao.length === 0) { 
-                tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777; padding: 20px;">Nenhum lançamento encontrado para este filtro.</td></tr>'; 
+                tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777; padding: 20px;">Nenhum lançamento encontrado para os filtros selecionados.</td></tr>'; 
             } else {
                 itensExibicao.forEach(t => {
                     const corTipo = t.tipo === 'entrada' ? 'bg-entrada' : 'bg-saida'; 
