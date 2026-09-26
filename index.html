@@ -2,15 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CiA Collectibles 3D - Gestão Completa</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CiA Collectibles 3D - Gestão em Nuvem</title>
     
@@ -186,6 +177,110 @@
         .status-nuvem { position: fixed; bottom: 8px; right: 8px; background: #333; color: #aaa; padding: 4px 8px; border-radius: 20px; font-size: 11px; display: flex; align-items: center; gap: 5px; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
         .led-online { width: 7px; height: 7px; background-color: var(--success); border-radius: 50%; display: inline-block; box-shadow: 0 0 4px var(--success);}
         .led-offline { width: 7px; height: 7px; background-color: var(--danger); border-radius: 50%; display: inline-block; box-shadow: 0 0 4px var(--danger);}
+    
+
+        /* --- AJUSTES VISUAIS DE LEITURA / FUNDO --- */
+        html, body { min-height: 100%; }
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top, rgba(255,107,0,0.08), transparent 28%),
+                linear-gradient(180deg, #101010 0%, #151515 45%, #111111 100%);
+        }
+
+        .main-container { padding-bottom: 30px; }
+        .header-title { margin-bottom: 24px; }
+        .header-title p { color: #c6c6c6; }
+
+        .tab-nav {
+            width: 100%;
+            background: rgba(20,20,20,0.95);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .tab-btn {
+            background-color: #202020;
+            border-color: #3b3b3b;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+        }
+
+        .tab-btn:hover { background-color: #2d2d2d; }
+        .tab-btn.active { box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 8px 20px rgba(255,107,0,0.18); }
+
+        .card {
+            background: linear-gradient(180deg, #1b1b1b 0%, #141414 100%);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.28);
+        }
+
+        .search-container input,
+        input[type="number"], input[type="text"], input[type="email"], input[type="password"], input[type="file"], input[type="date"], select {
+            background-color: #262626;
+            color: #f5f5f5;
+            border-color: #3a3a3a;
+        }
+
+        input::placeholder { color: #9f9f9f; opacity: 1; }
+
+        .saved-detail span:last-child,
+        .saved-card-content,
+        .saved-card-content strong,
+        .saved-total,
+        .batch-table td,
+        .batch-table td strong,
+        .batch-table td code,
+        .batch-table td span,
+        .batch-table td button,
+        .caixa-card,
+        .caixa-card h3 {
+            color: #f1f1f1;
+        }
+
+        table.batch-table {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        table.batch-table thead th {
+            background: #2b2b2b;
+            color: #ffffff;
+            border-bottom: 1px solid #4a4a4a;
+        }
+
+        table.batch-table tbody tr td {
+            background: #181818;
+            color: #efefef;
+            border-bottom: 1px solid #2d2d2d;
+        }
+
+        table.batch-table tbody tr:nth-child(even) td { background: #1d1d1d; }
+        table.batch-table tbody tr:hover td { background: #262626; }
+
+        #tab-estoque .search-container input,
+        #tab-caixa .search-container input,
+        #tab-galeria .search-container input {
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+        }
+
+        .caixa-grafico-container,
+        .caixa-card,
+        .fila-totais,
+        .results,
+        .viabilidade-box {
+            background: #181818;
+        }
+
+        .header-galeria h2,
+        #tab-estoque h2,
+        #tab-caixa h2,
+        #tab-galeria h2,
+        #tab-fila h2,
+        #tab-ajuda h2 {
+            color: var(--accent);
+        }
+
     </style>
 </head>
 <body>
@@ -1477,693 +1572,6 @@
                 } catch(err) { alert("Arquivo inválido."); }
             };
             r.readAsText(arq); evento.target.value = '';
-        }
-    </script>
-</body>
-</html>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .sidebar { min-height: 100vh; background: #212529; color: #fff; }
-        .sidebar .nav-link { color: #adb5bd; margin-bottom: 5px; border-radius: 5px; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: #0d6efd; }
-        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .tab-content-pane { display: none; }
-        .tab-content-pane.active { display: block; }
-        .preview-img { width: 100%H; height: 160px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px; }
-    </style>
-</head>
-<body>
-
-    <!-- TELA DE LOGIN -->
-    <div id="loginScreen" class="container d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="card p-4" style="width: 100%; max-width: 400px;">
-            <div class="text-center mb-4">
-                <i class="fa-solid fa-cube fa-3x text-primary mb-2"></i>
-                <h3>CiA Collectibles 3D</h3>
-                <p class="text-muted">Faça login para acessar o sistema</p>
-            </div>
-            <form id="loginForm">
-                <div class="mb-3">
-                    <label class="form-label">E-mail</label>
-                    <input type="email" id="loginEmail" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Senha</label>
-                    <input type="password" id="loginPassword" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Entrar</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- APLICATIVO PRINCIPAL -->
-    <div id="appScreen" style="display: none;">
-        <div class="container-fluid">
-            <div class="row">
-                <!-- MENU LATERAL -->
-                <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar collapse p-3">
-                    <div class="text-center mb-4">
-                        <h4>CiA Collectibles</h4>
-                        <span class="badge bg-primary">Gestão 3D</span>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item"><a class="nav-link active" href="#" onclick="mudarAba('calculadora', event)"><i class="fa-solid fa-calculator me-2"></i> Nova Peça</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" onclick="mudarAba('galeria', event)"><i class="fa-solid fa-images me-2"></i> Galeria</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" onclick="mudarAba('estoque', event)"><i class="fa-solid fa-boxes-stacked me-2"></i> Estoque & SKU</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" onclick="mudarAba('fila', event)"><i class="fa-solid fa-print me-2"></i> Fila de Impressão</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" onclick="mudarAba('caixa', event)"><i class="fa-solid fa-cash-register me-2"></i> Fluxo de Caixa</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" onclick="mudarAba('ajuda', event)"><i class="fa-solid fa-circle-question me-2"></i> Guia & Ajuda</a></li>
-                        <hr>
-                        <li class="nav-item"><a class="nav-link text-danger" href="#" onclick="fazerLogout()"><i class="fa-solid fa-right-from-bracket me-2"></i> Sair</a></li>
-                    </ul>
-                </nav>
-
-                <!-- CONTEÚDO PRINCIPAL -->
-                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-                    
-                    <!-- 1. CALCULADORA DE PRECIFICAÇÃO -->
-                    <div id="aba-calculadora" class="tab-content-pane active">
-                        <h2>Calculadora de Precificação</h2>
-                        <p class="text-muted">Calcule custos e viabilidade de peças impressas em 3D.</p>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card p-3 mb-4">
-                                    <form id="formCalculadora" onsubmit="salvarProjetoGaleria(event)">
-                                        <div class="mb-3">
-                                            <label class="form-label">Nome da Peça / Projeto</label>
-                                            <input type="text" id="calcNome" class="form-control" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Link da Imagem (URL)</label>
-                                            <input type="url" id="calcImagem" class="form-control" placeholder="https://...">
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-6 mb-3">
-                                                <label class="form-label">Peso Fatiado (g)</label>
-                                                <input type="number" id="calcPeso" class="form-control" step="0.1" required>
-                                            </div>
-                                            <div class="col-6 mb-3">
-                                                <label class="form-label">Preço Filamento (R$/kg)</label>
-                                                <input type="number" id="calcPrecoKg" class="form-control" value="80.00" step="0.01" required>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-6 mb-3">
-                                                <label class="form-label">Tempo Impressão (Horas)</label>
-                                                <input type="number" id="calcTempo" class="form-control" step="0.1" required>
-                                            </div>
-                                            <div class="col-6 mb-3">
-                                                <label class="form-label">Custo Energia/Hora (R$)</label>
-                                                <input type="number" id="calcEnergiaHora" class="form-control" value="1.50" step="0.01" required>
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Multiplicador de Venda / Categoria</label>
-                                            <select id="calcMultiplicador" class="form-select">
-                                                <option value="2">Padrão (2x)</option>
-                                                <option value="2.5">Colecionável Detalhado (2.5x)</option>
-                                                <option value="3">Premium / Pintado (3x)</option>
-                                            </select>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary w-100">Salvar na Galeria</button>
-                                    </form>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card p-3 bg-light">
-                                    <h4>Resultado da Simulação</h4>
-                                    <hr>
-                                    <p><strong>Custo de Material:</strong> <span id="resMaterial">R$ 0,00</span></p>
-                                    <p><strong>Custo Operacional/Energia:</strong> <span id="resEnergia">R$ 0,00</span></p>
-                                    <p><strong>Custo Total:</strong> <span id="resTotal">R$ 0,00</span></p>
-                                    <h3 class="text-success mt-3">Preço Sugerido: <span id="resSugerido">R$ 0,00</span></h3>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 2. GALERIA DE PROJETOS -->
-                    <div id="aba-galeria" class="tab-content-pane">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h2>Galeria de Projetos</h2>
-                            <div>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="exportarBackup()">Exportar JSON</button>
-                            </div>
-                        </div>
-                        <div class="row" id="gridGaleria">
-                            <!-- Preenchido via JS -->
-                        </div>
-                    </div>
-
-                    <!-- 3. ESTOQUE COM SKU -->
-                    <div id="aba-estoque" class="tab-content-pane">
-                        <h2>Controle de Estoque com SKU</h2>
-                        <p class="text-muted">Gerencie itens prontos e componentes com SKUs de 4 dígitos.</p>
-                        <div class="card p-3 mb-4">
-                            <form id="formEstoque" onsubmit="salvarEstoque(event)">
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Nome do Produto</label>
-                                        <input type="text" id="estoqueNome" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Categoria</label>
-                                        <input type="text" id="estoqueCategoria" class="form-control" placeholder="Ex: Action Figure">
-                                    </div>
-                                    <div class="col-md-2 mb-3">
-                                        <label class="form-label">Qtd Inicial</label>
-                                        <input type="number" id="estoqueQtd" class="form-control" value="1" required>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Preço de Venda (R$)</label>
-                                        <input type="number" id="estoquePreco" class="form-control" step="0.01" required>
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-success">Cadastrar no Estoque</button>
-                            </form>
-                        </div>
-                        <div class="card p-3">
-                            <div class="table-responsive">
-                                <table class="table table-striped align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>SKU</th>
-                                            <th>Produto</th>
-                                            <th>Categoria</th>
-                                            <th>Qtd</th>
-                                            <th>Preço</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabelaEstoque">
-                                        <!-- Preenchido via JS -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. FILA DE IMPRESSÃO -->
-                    <div id="aba-fila" class="tab-content-pane">
-                        <h2>Fila de Impressão</h2>
-                        <p class="text-muted">Acompanhe e organize o fluxo de produção das impressoras.</p>
-                        <div class="card p-3">
-                            <p>Selecione itens da Galeria para adicionar à fila de produção em andamento.</p>
-                            <div id="listaFilaProducao">
-                                <!-- Gerenciado via JS -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 5. FLUXO DE CAIXA (COM TAXAS AUTOMÁTICAS E EDIÇÃO) -->
-                    <div id="aba-caixa" class="tab-content-pane">
-                        <h2>Fluxo de Caixa</h2>
-                        <p class="text-muted">Registro de entradas, saídas e controle financeiro integrado com Mercado Pago.</p>
-                        
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <div class="card p-3 bg-success text-white">
-                                    <h5>Entradas Líquidas</h5>
-                                    <h3 id="resEntradas">R$ 0,00</h3>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card p-3 bg-danger text-white">
-                                    <h5>Saídas</h5>
-                                    <h3 id="resSaidas">R$ 0,00</h3>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card p-3 bg-primary text-white">
-                                    <h5>Saldo em Caixa</h5>
-                                    <h3 id="resSaldo">R$ 0,00</h3>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card p-3 mb-4">
-                            <h4 id="tituloFormCaixa">Novo Lançamento</h4>
-                            <form id="formCaixa" onsubmit="salvarOuAtualizarCaixa(event)">
-                                <div class="row">
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Tipo</label>
-                                        <select id="caixaTipo" class="form-select">
-                                            <option value="entrada">Entrada (Venda)</option>
-                                            <option value="saida">Saída (Despesa)</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Categoria</label>
-                                        <input type="text" id="caixaCategoria" class="form-control" placeholder="Ex: Filamento / Venda Peça" required>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Forma de Pagamento</label>
-                                        <select id="caixaFormaPagamento" class="form-select" onchange="calcularTaxaCaixa()">
-                                            <option value="dinheiro">Dinheiro / Pix Manual (0%)</option>
-                                            <option value="pix_mp">Pix - Mercado Pago (0.99%)</option>
-                                            <option value="debito">Débito - Mercado Pago (1.99%)</option>
-                                            <option value="credito">Crédito - Mercado Pago (4.98%)</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Descrição</label>
-                                        <input type="text" id="caixaDescricao" class="form-control" required>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Valor Bruto (R$)</label>
-                                        <input type="number" id="caixaValorBruto" class="form-control" step="0.01" oninput="calcularTaxaCaixa()" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Valor Líquido (Já com desconto da taxa)</label>
-                                        <input type="number" id="caixaValorLiquido" class="form-control" step="0.01" readonly required>
-                                        <small id="caixaInfoTaxa" class="text-muted">Taxa aplicada: R$ 0,00</small>
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button type="submit" id="btnSalvarCaixa" class="btn btn-primary">Salvar Lançamento</button>
-                                    <button type="button" id="btnCancelarEdicao" class="btn btn-secondary" style="display:none;" onclick="cancelarEdicaoCaixa()">Cancelar Edição</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div class="card p-3">
-                            <h4>Histórico de Lançamentos</h4>
-                            <div class="table-responsive mt-3">
-                                <table class="table table-striped align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>Data</th>
-                                            <th>Tipo</th>
-                                            <th>Categoria</th>
-                                            <th>Descrição</th>
-                                            <th>Forma Pagto</th>
-                                            <th>Valor Bruto</th>
-                                            <th>Valor Líquido</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabelaCaixa">
-                                        <!-- Preenchido via JS -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 6. GUIA E AJUDA -->
-                    <div id="aba-ajuda" class="tab-content-pane">
-                        <h2>Guia do Sistema</h2>
-                        <div class="card p-4">
-                            <h4>Fórmulas e Operação</h4>
-                            <p><strong>Custo de Material:</strong> (Peso em gramas / 1000) * Preço do Kg do Filamento.</p>
-                            <p><strong>Custo de Energia:</strong> Horas de impressão * Custo de energia por hora.</p>
-                            <p><strong>Taxas Automáticas:</strong> Ao selecionar a modalidade do Mercado Pago, o sistema desconta automaticamente a porcentagem correspondente do valor bruto para registrar o valor líquido real no caixa.</p>
-                            <p><strong>Integração Galeria ➔ Estoque:</strong> Na aba Galeria, clique em "Enviar para Estoque" para cadastrar o projeto automaticamente no inventário com um SKU exclusivo de 4 dígitos.</p>
-                        </div>
-                    </div>
-
-                </main>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCRIPTS DE CONFIGURAÇÃO E LÓGICA -->
-    <script>
-        // CONFIGURAÇÃO DO FIREBASE (Insira seus dados do projeto se necessário ou mantenha os padrões)
-        const firebaseConfig = {
-            apiKey: "AIzaSyDummyKeyForTemplate-Example",
-            authDomain: "ciacollectibles3d.firebaseapp.com",
-            databaseURL: "https://ciacollectibles3d-default-rtdb.firebaseio.com",
-            projectId: "ciacollectibles3d",
-            storageBucket: "ciacollectibles3d.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
-        };
-
-        // Inicializa Firebase se compatível
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (e) {
-            console.log("Firebase já inicializado ou rodando offline.");
-        }
-
-        // Variáveis globais de cache e controle
-        let cacheGaleria = [];
-        let editandoCaixaId = null;
-
-        // TAXAS DO MERCADO PAGO
-        const taxasMercadoPago = {
-            dinheiro: 0.00,
-            pix_mp: 0.99,    // 0,99% Pix
-            debito: 1.99,    // 1,99% Débito
-            credito: 4.98    // 4,98% Crédito
-        };
-
-        function calcularTaxaCaixa() {
-            const valorBruto = parseFloat(document.getElementById('caixaValorBruto').value) || 0;
-            const forma = document.getElementById('caixaFormaPagamento').value;
-            const percentual = taxasMercadoPago[forma] || 0;
-            const valorTaxa = (valorBruto * percentual) / 100;
-            const valorLiquido = valorBruto - valorTaxa;
-
-            document.getElementById('caixaValorLiquido').value = valorLiquido.toFixed(2);
-            document.getElementById('caixaInfoTaxa').innerText = `Taxa aplicada (${percentual}%): R$ ${valorTaxa.toFixed(2)}`;
-        }
-
-        // AUTENTICAÇÃO SIMPLES
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            // Simulação de login bem sucedido para demonstração imediata ou integração Firebase Auth
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('appScreen').style.display = 'block';
-            carregarDadosIniciais();
-        });
-
-        function fazerLogout() {
-            document.getElementById('appScreen').style.display = 'none';
-            document.getElementById('loginScreen').style.display = 'block';
-        }
-
-        function mudarAba(abaId, event) {
-            if(event) event.preventDefault();
-            document.querySelectorAll('.tab-content-pane').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById('aba-' + abaId).classList.add('active');
-            if(event && event.currentTarget) event.currentTarget.classList.add('active');
-        }
-
-        // CÁLCULO DINÂMICO NA ABA CALCULADORA
-        ['calcPeso', 'calcPrecoKg', 'calcTempo', 'calcEnergiaHora', 'calcMultiplicador'].forEach(id => {
-            document.getElementById(id).addEventListener('input', atualizarCalculadoraPreview);
-        });
-
-        function atualizarCalculadoraPreview() {
-            const peso = parseFloat(document.getElementById('calcPeso').value) || 0;
-            const precoKg = parseFloat(document.getElementById('calcPrecoKg').value) || 0;
-            const tempo = parseFloat(document.getElementById('calcTempo').value) || 0;
-            const energiaHora = parseFloat(document.getElementById('calcEnergiaHora').value) || 0;
-            const mult = parseFloat(document.getElementById('calcMultiplicador').value) || 2;
-
-            const custoMaterial = (peso / 1000) * precoKg;
-            const custoEnergia = tempo * energiaHora;
-            const custoTotal = custoMaterial + custoEnergia;
-            const precoSugerido = custoTotal * mult;
-
-            document.getElementById('resMaterial').innerText = `R$ ${custoMaterial.toFixed(2)}`;
-            document.getElementById('resEnergia').innerText = `R$ ${custoEnergia.toFixed(2)}`;
-            document.getElementById('resTotal').innerText = `R$ ${custoTotal.toFixed(2)}`;
-            document.getElementById('resSugerido').innerText = `R$ ${precoSugerido.toFixed(2)}`;
-        }
-
-        // SALVAR NA GALERIA
-        function salvarProjetoGaleria(e) {
-            e.preventDefault();
-            const nome = document.getElementById('calcNome').value;
-            const imagemUrl = document.getElementById('calcImagem').value || 'https://via.placeholder.com/300?text=CiA+Collectibles+3D';
-            const peso = parseFloat(document.getElementById('calcPeso').value);
-            const precoKg = parseFloat(document.getElementById('calcPrecoKg').value);
-            const tempo = parseFloat(document.getElementById('calcTempo').value);
-            const energiaHora = parseFloat(document.getElementById('calcEnergiaHora').value);
-            const mult = parseFloat(document.getElementById('calcMultiplicador').value);
-
-            const custoTotal = ((peso / 1000) * precoKg) + (tempo * energiaHora);
-            const precoSugerido = custoTotal * mult;
-
-            const novoProjeto = {
-                nome,
-                imagemUrl,
-                custoTotal,
-                precoSugerido,
-                categoria: 'Colecionável 3D',
-                data: new Date().toISOString()
-            };
-
-            firebase.database().ref('galeria').push(novoProjeto)
-                .then(() => {
-                    alert('Projeto salvo na Galeria com sucesso!');
-                    document.getElementById('formCalculadora').reset();
-                    carregarGaleria();
-                })
-                .catch(err => alert('Erro ao salvar: ' + err.message));
-        }
-
-        // CARREGAR GALERIA E INTEGRAÇÃO COM ESTOQUE
-        function carregarGaleria() {
-            firebase.database().ref('galeria').on('value', (snapshot) => {
-                const data = snapshot.val();
-                const grid = document.getElementById('gridGaleria');
-                grid.innerHTML = '';
-                cacheGaleria = [];
-
-                if (!data) {
-                    grid.innerHTML = '<p class="text-muted">Nenhum projeto na galeria ainda.</p>';
-                    return;
-                }
-
-                Object.keys(data).forEach(id => {
-                    const item = data[id];
-                    item.id = id;
-                    cacheGaleria.push(item);
-
-                    grid.innerHTML += `
-                        <div class="col-md-4 mb-3">
-                            <div class="card h-100">
-                                <img src="${item.imagemUrl}" class="preview-img" alt="${item.nome}">
-                                <div class="card-body">
-                                    <h5 class="card-title">${item.nome}</h5>
-                                    <p class="card-text mb-1"><strong>Custo:</strong> R$ ${item.custoTotal.toFixed(2)}</p>
-                                    <p class="card-text mb-3"><strong>Sugerido:</strong> R$ ${item.precoSugerido.toFixed(2)}</p>
-                                    <button class="btn btn-sm btn-info w-100 mb-2" onclick="enviarGaleriaParaEstoque('${id}')"><i class="fa-solid fa-box-archive me-1"></i> Enviar para Estoque</button>
-                                    <button class="btn btn-sm btn-outline-danger w-100" onclick="deletarGaleriaItem('${id}')"><i class="fa-solid fa-trash me-1"></i> Excluir</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-        }
-
-        function deletarGaleriaItem(id) {
-            if(confirm('Deseja excluir este item da galeria?')) {
-                firebase.database().ref('galeria/' + id).remove();
-            }
-        }
-
-        // SKU DE 4 DÍGITOS E ESTOQUE
-        function gerarSkuAleatorio() {
-            return Math.floor(1000 + Math.random() * 9000).toString();
-        }
-
-        function enviarGaleriaParaEstoque(galleryId) {
-            const item = cacheGaleria.find(i => i.id === galleryId);
-            if (!item) return;
-
-            const produtoEstoque = {
-                sku: gerarSkuAleatorio(),
-                nome: item.nome,
-                categoria: item.categoria,
-                precoVenda: item.precoSugerido,
-                quantidade: 1,
-                custoMaterial: item.custoTotal,
-                dataCriacao: new Date().toISOString()
-            };
-
-            firebase.database().ref('estoque').push(produtoEstoque)
-                .then(() => {
-                    alert(`Produto "${produtoEstoque.nome}" enviado para o Estoque! SKU Gerado: ${produtoEstoque.sku}`);
-                    carregarEstoque();
-                });
-        }
-
-        function salvarEstoque(e) {
-            e.preventDefault();
-            const novoProduto = {
-                sku: gerarSkuAleatorio(),
-                nome: document.getElementById('estoqueNome').value,
-                categoria: document.getElementById('estoqueCategoria').value,
-                quantidade: parseInt(document.getElementById('estoqueQtd').value),
-                precoVenda: parseFloat(document.getElementById('estoquePreco').value),
-                dataCriacao: new Date().toISOString()
-            };
-
-            firebase.database().ref('estoque').push(novoProduto)
-                .then(() => {
-                    alert('Produto cadastrado no estoque com sucesso!');
-                    document.getElementById('formEstoque').reset();
-                    carregarEstoque();
-                });
-        }
-
-        function carregarEstoque() {
-            firebase.database().ref('estoque').on('value', (snapshot) => {
-                const data = snapshot.val();
-                const tabela = document.getElementById('tabelaEstoque');
-                tabela.innerHTML = '';
-
-                if (!data) {
-                    tabela.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Estoque vazio.</td></tr>';
-                    return;
-                }
-
-                Object.keys(data).forEach(id => {
-                    const item = data[id];
-                    tabela.innerHTML += `
-                        <tr>
-                            <td><code>${item.sku}</code></td>
-                            <td>${item.nome}</td>
-                            <td>${item.categoria || '-'}</td>
-                            <td>${item.quantidade}</td>
-                            <td>R$ ${item.precoVenda.toFixed(2)}</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deletarEstoqueItem('${id}')"><i class="fa-solid fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            });
-        }
-
-        function deletarEstoqueItem(id) {
-            if(confirm('Remover item do estoque?')) {
-                firebase.database().ref('estoque/' + id).remove();
-            }
-        }
-
-        // FLUXO DE CAIXA: EDIÇÃO E LANÇAMENTO COM TAXAS
-        function salvarOuAtualizarCaixa(e) {
-            e.preventDefault();
-            const tipo = document.getElementById('caixaTipo').value;
-            const categoria = document.getElementById('caixaCategoria').value;
-            const descricao = document.getElementById('caixaDescricao').value;
-            const formaPagamento = document.getElementById('caixaFormaPagamento').value;
-            const valorBruto = parseFloat(document.getElementById('caixaValorBruto').value);
-            const valorLiquido = parseFloat(document.getElementById('caixaValorLiquido').value);
-
-            const dados = {
-                tipo,
-                categoria,
-                descricao,
-                formaPagamento,
-                valorBruto,
-                valorLiquido,
-                data: new Date().toISOString()
-            };
-
-            if (editandoCaixaId) {
-                firebase.database().ref('caixa/' + editandoCaixaId).update(dados)
-                    .then(() => {
-                        alert('Lançamento atualizado com sucesso!');
-                        cancelarEdicaoCaixa();
-                        carregarCaixa();
-                    });
-            } else {
-                firebase.database().ref('caixa').push(dados)
-                    .then(() => {
-                        alert('Lançamento salvo com sucesso!');
-                        document.getElementById('formCaixa').reset();
-                        document.getElementById('caixaValorLiquido').value = '';
-                        carregarCaixa();
-                    });
-            }
-        }
-
-        function prepararEdicaoCaixa(id, tipo, categoria, descricao, formaPagamento, valorBruto) {
-            editandoCaixaId = id;
-            document.getElementById('caixaTipo').value = tipo;
-            document.getElementById('caixaCategoria').value = categoria;
-            document.getElementById('caixaDescricao').value = descricao;
-            document.getElementById('caixaFormaPagamento').value = formaPagamento;
-            document.getElementById('caixaValorBruto').value = valorBruto;
-            calcularTaxaCaixa();
-
-            document.getElementById('tituloFormCaixa').innerText = 'Editar Lançamento';
-            document.getElementById('btnSalvarCaixa').innerText = 'Atualizar Lançamento';
-            document.getElementById('btnCancelarEdicao').style.display = 'inline-block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function cancelarEdicaoCaixa() {
-            editandoCaixaId = null;
-            document.getElementById('formCaixa').reset();
-            document.getElementById('caixaValorLiquido').value = '';
-            document.getElementById('tituloFormCaixa').innerText = 'Novo Lançamento';
-            document.getElementById('btnSalvarCaixa').innerText = 'Salvar Lançamento';
-            document.getElementById('btnCancelarEdicao').style.display = 'none';
-        }
-
-        function carregarCaixa() {
-            firebase.database().ref('caixa').on('value', (snapshot) => {
-                const data = snapshot.val();
-                const tabela = document.getElementById('tabelaCaixa');
-                tabela.innerHTML = '';
-
-                let totalEntradas = 0;
-                let totalSaidas = 0;
-
-                if (!data) {
-                    tabela.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum lançamento registrado.</td></tr>';
-                    document.getElementById('resEntradas').innerText = 'R$ 0,00';
-                    document.getElementById('resSaidas').innerText = 'R$ 0,00';
-                    document.getElementById('resSaldo').innerText = 'R$ 0,00';
-                    return;
-                }
-
-                Object.keys(data).forEach(id => {
-                    const item = data[id];
-                    const valorLiq = item.valorLiquido || item.valorBruto || 0;
-                    
-                    if (item.tipo === 'entrada') totalEntradas += valorLiq;
-                    else totalSaidas += item.valorBruto || 0;
-
-                    const dataFormatada = new Date(item.data).toLocaleDateString('pt-BR');
-
-                    tabela.innerHTML += `
-                        <tr>
-                            <td>${dataFormatada}</td>
-                            <td><span class="badge bg-${item.tipo === 'entrada' ? 'success' : 'danger'}">${item.tipo.toUpperCase()}</span></td>
-                            <td>${item.categoria}</td>
-                            <td>${item.descricao}</td>
-                            <td>${item.formaPagamento || 'dinheiro'}</td>
-                            <td>R$ ${(item.valorBruto || 0).toFixed(2)}</td>
-                            <td><strong>R$ ${valorLiq.toFixed(2)}</strong></td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary me-1" onclick="prepararEdicaoCaixa('${id}', '${item.tipo}', '${item.categoria}', '${item.descricao}', '${item.formaPagamento || 'dinheiro'}', ${item.valorBruto || 0})"><i class="fa-solid fa-pen"></i></button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deletarCaixaItem('${id}')"><i class="fa-solid fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                const saldo = totalEntradas - totalSaidas;
-                document.getElementById('resEntradas').innerText = `R$ ${totalEntradas.toFixed(2)}`;
-                document.getElementById('resSaidas').innerText = `R$ ${totalSaidas.toFixed(2)}`;
-                document.getElementById('resSaldo').innerText = `R$ ${saldo.toFixed(2)}`;
-            });
-        }
-
-        function deletarCaixaItem(id) {
-            if(confirm('Excluir este lançamento do caixa?')) {
-                firebase.database().ref('caixa/' + id).remove();
-            }
-        }
-
-        function exportarBackup() {
-            alert('Função de exportação JSON pronta.');
-        }
-
-        function carregarDadosIniciais() {
-            carregarGaleria();
-            carregarEstoque();
-            carregarCaixa();
         }
     </script>
 </body>
