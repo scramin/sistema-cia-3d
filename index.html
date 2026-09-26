@@ -562,6 +562,33 @@
                     </table>
                 </div>
             </div>
+
+            <div class="card" style="margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:12px;">
+                    <div>
+                        <h2 style="border:none; margin:0; padding:0;">🏆 Ranking de Vendas</h2>
+                        <p style="color:var(--text-muted); font-size:12px; margin:5px 0 0;">Baseado nas vendas lançadas no Caixa e vinculadas a um SKU.</p>
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <select id="filtroRankingPeriodo" onchange="renderizarRankingVendas()" style="padding:7px 10px; font-size:13px;">
+                            <option value="todos">Todo o período</option>
+                            <option value="30">Últimos 30 dias</option>
+                            <option value="90">Últimos 90 dias</option>
+                        </select>
+                        <input type="date" id="filtroRankingDia" onchange="renderizarRankingVendas()" title="Escolher um dia específico" style="padding:7px 10px; font-size:13px;">
+                        <button class="btn-backup" onclick="limparFiltroRanking()" style="padding:7px 10px; font-size:12px;">Limpar</button>
+                    </div>
+                </div>
+                <div id="recomendacaoProducao" style="background:#252525; border:1px solid var(--accent); border-radius:8px; padding:12px; margin-bottom:14px; font-size:13px;">Carregando recomendação...</div>
+                <div class="table-responsive">
+                    <table class="batch-table">
+                        <thead>
+                            <tr><th>#</th><th>Produto</th><th>SKU</th><th>Unidades Vendidas</th><th>Faturamento Líquido</th><th>Estoque Atual</th><th>Recomendação</th></tr>
+                        </thead>
+                        <tbody id="tabelaRankingVendas"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- ABA 4: Fila de Impressão -->
@@ -677,10 +704,15 @@
                         <button class="tab-btn" id="filtro-caixa-entrada" onclick="filtrarCaixa('entrada')" style="padding: 6px 12px; font-size: 13px;">🟢 Entradas</button>
                         <button class="tab-btn" id="filtro-caixa-saida" onclick="filtrarCaixa('saida')" style="padding: 6px 12px; font-size: 13px;">🔴 Saídas</button>
                     </div>
-                    <div style="flex-grow: 1; min-width: 160px;">
-                        <select id="filtroMesCaixa" onchange="renderizarCaixa()" style="padding: 7px 10px; font-size: 13px; height: auto;">
+                    <div style="min-width: 160px;">
+                        <select id="filtroMesCaixa" onchange="renderizarCaixa()" style="padding: 7px 10px; font-size: 13px; height: auto; width:100%;">
                             <option value="todos">📅 Todos os Meses</option>
                         </select>
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <label for="filtroDiaCaixa" style="font-size:12px; color:var(--text-muted);">Dia:</label>
+                        <input type="date" id="filtroDiaCaixa" onchange="renderizarCaixa()" style="padding:7px 10px; font-size:13px; height:auto;">
+                        <button class="btn-backup" onclick="limparFiltroDiaCaixa()" style="padding:7px 10px; font-size:12px;">Limpar dia</button>
                     </div>
                 </div>
 
@@ -865,6 +897,7 @@
                 window.estoqueSalvo = data ? Object.values(data) : [];
                 renderizarEstoque();
                 atualizarDropdownVendaEstoque();
+                renderizarRankingVendas();
             });
         }
 
@@ -1239,6 +1272,92 @@
             alert('Produto enviado para o cadastro de estoque. Confira material, cor e quantidade e clique em Adicionar ao Estoque.');
         }
 
+        // --- RANKING DE VENDAS E RECOMENDAÇÃO DE PRODUÇÃO ---
+        function limparFiltroRanking() {
+            const dia = document.getElementById('filtroRankingDia');
+            const periodo = document.getElementById('filtroRankingPeriodo');
+            if (dia) dia.value = '';
+            if (periodo) periodo.value = 'todos';
+            renderizarRankingVendas();
+        }
+
+        function obterDataLocalISO(d) {
+            const dt = d instanceof Date ? d : new Date(d);
+            const ano = dt.getFullYear();
+            const mes = String(dt.getMonth() + 1).padStart(2, '0');
+            const dia = String(dt.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
+        function renderizarRankingVendas() {
+            const tb = document.getElementById('tabelaRankingVendas');
+            const rec = document.getElementById('recomendacaoProducao');
+            if (!tb || !rec) return;
+
+            const diaSelecionado = document.getElementById('filtroRankingDia')?.value || '';
+            const periodo = document.getElementById('filtroRankingPeriodo')?.value || 'todos';
+            const agora = new Date();
+            const limite = periodo !== 'todos' ? new Date(agora.getTime() - Number(periodo) * 86400000) : null;
+
+            const vendas = {};
+            (window.fluxoCaixa || []).forEach(t => {
+                if (t.tipo !== 'entrada' || t.categoria !== 'Vendas' || !t.skuVenda) return;
+                const data = t.data || '';
+                if (diaSelecionado && data !== diaSelecionado) return;
+                if (!diaSelecionado && limite) {
+                    const d = new Date(data + 'T23:59:59');
+                    if (isNaN(d.getTime()) || d < limite) return;
+                }
+                const sku = String(t.skuVenda);
+                const qtd = Math.max(1, parseInt(t.qtdVendida) || 1);
+                if (!vendas[sku]) vendas[sku] = { sku, qtd: 0, receita: 0 };
+                vendas[sku].qtd += qtd;
+                vendas[sku].receita += Number(t.valor) || 0;
+            });
+
+            const ranking = Object.values(vendas).map(v => {
+                const estoque = (window.estoqueSalvo || []).find(i => String(i.sku) === String(v.sku));
+                return { ...v, nome: estoque?.nome || `SKU ${v.sku}`, stock: Number(estoque?.stock) || 0 };
+            }).sort((a,b) => b.qtd - a.qtd || b.receita - a.receita);
+
+            tb.innerHTML = '';
+            if (!ranking.length) {
+                tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999; padding:20px;">Ainda não há vendas vinculadas a SKU no período selecionado.</td></tr>';
+                rec.innerHTML = '💡 <strong>Recomendação:</strong> lance as vendas pelo SKU no Caixa para o sistema identificar automaticamente quais produtos têm maior saída.';
+                return;
+            }
+
+            const lider = ranking[0];
+            const diasParaRecomendacao = diaSelecionado ? 1 : (periodo === 'todos' ? 30 : Number(periodo));
+            const inicioRec = new Date(agora.getTime() - diasParaRecomendacao * 86400000);
+            const vendasRec = {};
+            (window.fluxoCaixa || []).forEach(t => {
+                if (t.tipo !== 'entrada' || t.categoria !== 'Vendas' || !t.skuVenda) return;
+                if (diaSelecionado && t.data !== diaSelecionado) return;
+                if (!diaSelecionado && new Date((t.data || '') + 'T23:59:59') < inicioRec) return;
+                const sku = String(t.skuVenda);
+                vendasRec[sku] = (vendasRec[sku] || 0) + Math.max(1, parseInt(t.qtdVendida) || 1);
+            });
+
+            const recomendados = ranking.map(v => {
+                const vendasNoPeriodoRec = vendasRec[v.sku] || 0;
+                const mediaSemanal = vendasNoPeriodoRec / Math.max(1, diasParaRecomendacao / 7);
+                const estoqueAlvo = Math.max(1, Math.ceil(mediaSemanal * 2));
+                const produzir = Math.max(0, estoqueAlvo - v.stock);
+                return { ...v, produzir, estoqueAlvo, vendasNoPeriodoRec };
+            }).filter(v => v.produzir > 0).sort((a,b) => b.vendasNoPeriodoRec - a.vendasNoPeriodoRec).slice(0, 3);
+
+            ranking.forEach((v, idx) => {
+                const infoRec = recomendados.find(r => r.sku === v.sku);
+                const recomendacao = infoRec ? `<span style="color:var(--warning); font-weight:bold;">Produzir +${infoRec.produzir}</span>` : '<span style="color:var(--success); font-weight:bold;">Estoque OK</span>';
+                tb.innerHTML += `<tr><td style="font-weight:bold; color:var(--accent);">${idx + 1}º</td><td>${v.nome}</td><td>${v.sku}</td><td style="font-weight:bold;">${v.qtd} un.</td><td>${formatarMoeda(v.receita)}</td><td>${v.stock} un.</td><td>${recomendacao}</td></tr>`;
+            });
+
+            const filtroTexto = diaSelecionado ? `no dia ${diaSelecionado.split('-').reverse().join('/')}` : (periodo === 'todos' ? 'em todo o histórico' : `nos últimos ${periodo} dias`);
+            const nomes = recomendados.map(x => `${x.nome} (+${x.produzir} para reposição)`).join(', ');
+            rec.innerHTML = `📈 <strong>Recomendação de produção:</strong> ${filtroTexto}, <strong>${lider.nome}</strong> lidera com <strong>${lider.qtd} unidade(s) vendida(s)</strong>. ${nomes ? `Pelo ritmo de vendas dos últimos ${diasParaRecomendacao} dia(s), priorize: <strong>${nomes}</strong>. O cálculo busca manter aproximadamente 2 semanas de cobertura de estoque.` : `Não há produtos abaixo do nível de reposição calculado para o ritmo recente de vendas.`}`;
+        }
+
         // --- FLUXO DE CAIXA E FILTROS (TIPO + MÊS) ---
 
         function toggleCategoriaOutros() {
@@ -1436,17 +1555,20 @@
             if (confirm('Apagar este lançamento?')) { db.ref('caixa/' + id).remove(); }
         }
 
+        function limparFiltroDiaCaixa() {
+            const el = document.getElementById('filtroDiaCaixa');
+            if (el) el.value = '';
+            renderizarCaixa();
+        }
+
         function renderizarCaixa() {
-            const tb = document.getElementById('tabelaCaixa'); tb.innerHTML = ''; let totalIn = 0; let totalOut = 0;
-            
-            window.fluxoCaixa.forEach(t => {
-                if (t.tipo === 'entrada') totalIn += t.valor; else totalOut += t.valor;
-            });
+            const tb = document.getElementById('tabelaCaixa'); tb.innerHTML = '';
 
             const selectMes = document.getElementById('filtroMesCaixa');
+            const diaSelecionado = document.getElementById('filtroDiaCaixa')?.value || '';
             const mesSelecionado = selectMes ? selectMes.value : 'todos';
-            const mesesDisponiveis = [...new Set(window.fluxoCaixa.map(t => t.data.substring(0, 7)))].sort().reverse();
-            
+            const mesesDisponiveis = [...new Set((window.fluxoCaixa || []).map(t => (t.data || '').substring(0, 7)).filter(Boolean))].sort().reverse();
+
             if (selectMes) {
                 let optionsHtml = '<option value="todos">📅 Todos os Meses</option>';
                 mesesDisponiveis.forEach(m => {
@@ -1456,21 +1578,24 @@
                 selectMes.innerHTML = optionsHtml;
             }
 
-            let itensExibicao = window.fluxoCaixa;
-            if (window.filtroCaixaAtual !== 'todos') {
-                itensExibicao = itensExibicao.filter(t => t.tipo === window.filtroCaixaAtual);
-            }
-            if (mesSelecionado && mesSelecionado !== 'todos') {
-                itensExibicao = itensExibicao.filter(t => t.data.substring(0, 7) === mesSelecionado);
+            let itensExibicao = [...(window.fluxoCaixa || [])];
+            if (window.filtroCaixaAtual !== 'todos') itensExibicao = itensExibicao.filter(t => t.tipo === window.filtroCaixaAtual);
+            if (diaSelecionado) {
+                itensExibicao = itensExibicao.filter(t => t.data === diaSelecionado);
+            } else if (mesSelecionado && mesSelecionado !== 'todos') {
+                itensExibicao = itensExibicao.filter(t => (t.data || '').substring(0, 7) === mesSelecionado);
             }
 
-            if (itensExibicao.length === 0) { 
-                tb.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#777; padding: 20px;">Nenhum lançamento encontrado para os filtros selecionados.</td></tr>'; 
+            let totalIn = 0, totalOut = 0;
+            itensExibicao.forEach(t => { if (t.tipo === 'entrada') totalIn += Number(t.valor) || 0; else totalOut += Number(t.valor) || 0; });
+
+            if (itensExibicao.length === 0) {
+                tb.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#777; padding:20px;">Nenhum lançamento encontrado para os filtros selecionados.</td></tr>';
             } else {
                 itensExibicao.forEach(t => {
-                    const corTipo = t.tipo === 'entrada' ? 'bg-entrada' : 'bg-saida'; 
-                    const txtTipo = t.tipo === 'entrada' ? 'Entrada' : 'Saída'; 
-                    const dataFormatada = t.data.split('-').reverse().join('/'); 
+                    const corTipo = t.tipo === 'entrada' ? 'bg-entrada' : 'bg-saida';
+                    const txtTipo = t.tipo === 'entrada' ? 'Entrada' : 'Saída';
+                    const dataFormatada = (t.data || '').split('-').reverse().join('/');
                     const btnAnexo = t.anexo ? `<button class="btn-doc" onclick="abrirModalAnexo('${t.id}')">📄</button>` : `<span style="color:#555">-</span>`;
                     const pagamentoLabel = t.formaPagamentoLabel || (t.formaPagamento && TAXAS_MERCADO_PAGO[t.formaPagamento]?.label) || '-';
                     const taxaExibicao = (Number(t.taxaValor) || 0) > 0 ? `${formatarMoeda(Number(t.taxaValor))} (${Number(t.taxaPercentual || 0).toFixed(2).replace('.', ',')}%)` : '-';
@@ -1480,17 +1605,17 @@
             }
 
             const saldo = totalIn - totalOut;
-            document.getElementById('caixaEntradas').innerText = formatarMoeda(totalIn); 
-            document.getElementById('caixaSaidas').innerText = formatarMoeda(totalOut); 
-            document.getElementById('caixaSaldo').innerText = formatarMoeda(saldo); 
-            document.getElementById('caixaSaldo').style.color = saldo >= 0 ? "var(--accent)" : "var(--danger)";
-            renderizarGraficoCaixa();
+            document.getElementById('caixaEntradas').innerText = formatarMoeda(totalIn);
+            document.getElementById('caixaSaidas').innerText = formatarMoeda(totalOut);
+            document.getElementById('caixaSaldo').innerText = formatarMoeda(saldo);
+            document.getElementById('caixaSaldo').style.color = saldo >= 0 ? 'var(--accent)' : 'var(--danger)';
+            renderizarGraficoCaixa(itensExibicao);
         }
 
-        function renderizarGraficoCaixa() {
+        function renderizarGraficoCaixa(itensFonte) {
             if (typeof Chart === 'undefined') return; 
             const ctx = document.getElementById('graficoCaixa').getContext('2d'); const meses = {};
-            [...window.fluxoCaixa].reverse().forEach(t => {
+            [...(itensFonte || window.fluxoCaixa || [])].reverse().forEach(t => {
                 const mesAno = t.data.substring(0, 7); 
                 if (!meses[mesAno]) meses[mesAno] = { in: 0, out: 0 };
                 if (t.tipo === 'entrada') meses[mesAno].in += t.valor; else meses[mesAno].out += t.valor;
