@@ -259,7 +259,8 @@
         <div class="tab-nav">
             <button class="tab-btn active" id="btn-tab-orcamento" onclick="abrirAba('tab-orcamento')">📝 Nova Peça</button>
             <button class="tab-btn" id="btn-tab-galeria" onclick="abrirAba('tab-galeria')">📂 Galeria</button>
-            <button class="tab-btn" id="btn-tab-fila" onclick="abrirAba('tab-fila')">📦 Fila <span class="badge" id="badge-fila">0</span></button>
+            <button class="tab-btn" id="btn-tab-estoque" onclick="abrirAba('tab-estoque')">📦 Estoque</button>
+            <button class="tab-btn" id="btn-tab-fila" onclick="abrirAba('tab-fila')">📋 Fila <span class="badge" id="badge-fila">0</span></button>
             <button class="tab-btn" id="btn-tab-caixa" onclick="abrirAba('tab-caixa')">📊 Caixa</button>
             <button class="tab-btn" id="btn-tab-ajuda" onclick="abrirAba('tab-ajuda')">📖 Ajuda</button>
         </div>
@@ -388,7 +389,78 @@
             <div class="saved-grid" id="gridOrcamentos"></div>
         </div>
 
-        <!-- ABA 3: Fila de Impressão -->
+        <!-- ABA 3: Estoque com Variantes e SKU de 4 Dígitos (Sincronizado na Nuvem) -->
+        <div id="tab-estoque" class="tab-content">
+            <div class="layout-grid" style="margin-bottom: 20px;">
+                <div class="card">
+                    <h2>📦 Cadastrar Variante / Produto</h2>
+                    <div class="form-group">
+                        <label>Nome Base do Produto</label>
+                        <input type="text" id="estNome" placeholder="Ex: Dragão Articulado">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Filamento</label>
+                            <select id="estMaterial">
+                                <option value="PLA">PLA</option>
+                                <option value="PETG">PETG</option>
+                                <option value="Silk">Silk</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cor Específica</label>
+                            <input type="text" id="estCor" placeholder="Ex: Azul Metálico">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Preço de Venda (R$)</label>
+                            <input type="number" id="estPreco" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Qtd. Inicial Pronta</label>
+                            <input type="number" id="estQtd" value="1" min="0">
+                        </div>
+                    </div>
+                    <button class="btn-salvar" onclick="salvarVarianteEstoque()" style="margin-top: 15px;">➕ Adicionar ao Estoque (SKU Automático)</button>
+                </div>
+
+                <div class="card">
+                    <h2>💡 Informações de Estoque & Vendas</h2>
+                    <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6;">
+                        • Cada variante gerada recebe um <strong>SKU exclusivo de 4 dígitos</strong> (ex: <code style="color:var(--accent);">4812</code>).<br>
+                        • Ao registrar uma venda na aba <strong>Caixa</strong> informando o SKU, o sistema desconta automaticamente a quantidade em estoque na nuvem.<br>
+                        • Todas as informações ficam salvas de forma segura no Firebase, sem perda de dados.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="header-galeria" style="margin-bottom: 15px;">
+                    <h2 style="border:none; margin:0; padding:0;">Inventário Ativo</h2>
+                </div>
+                <div class="search-container">
+                    <input type="text" id="pesquisaEstoque" placeholder="🔍 Pesquisar por SKU ou nome do produto..." oninput="renderizarEstoque()">
+                </div>
+                <div class="table-responsive">
+                    <table class="batch-table">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Produto</th>
+                                <th>Material / Cor</th>
+                                <th>Preço Unit.</th>
+                                <th>Estoque</th>
+                                <th style="text-align:center;">Ajustes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaEstoque"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 4: Fila de Impressão -->
         <div id="tab-fila" class="tab-content">
             <div class="card">
                 <h2>Filas de Impressão</h2>
@@ -405,7 +477,7 @@
             </div>
         </div>
 
-        <!-- ABA 4: Fluxo de Caixa (Com filtros de Entrada/Saída e Filtro por Mês) -->
+        <!-- ABA 5: Fluxo de Caixa (Com Integração de Vendas por SKU) -->
         <div id="tab-caixa" class="tab-content">
             <div class="caixa-resumo-grid">
                 <div class="caixa-card"><h3>Entradas</h3><div class="valor valor-entrada" id="caixaEntradas">R$ 0,00</div></div>
@@ -415,7 +487,7 @@
             <div class="caixa-grafico-container"><canvas id="graficoCaixa"></canvas></div>
 
             <div class="card" style="margin-bottom: 20px;">
-                <h2>Nova Movimentação</h2>
+                <h2>Nova Movimentação / Venda</h2>
                 <div class="form-row">
                     <div class="form-group"><label>Data</label><input type="date" id="caixaData"></div>
                     <div class="form-group"><label>Tipo</label>
@@ -435,15 +507,36 @@
                         <input type="text" id="caixaCategoriaOutros" placeholder="Especifique..." style="display:none; margin-top: 8px;">
                     </div>
                 </div>
+
+                <!-- Seção de Venda Integrada ao Estoque via SKU -->
+                <div style="background: #252525; padding: 12px; border-radius: 8px; border: 1px dashed var(--accent); margin-bottom: 12px;">
+                    <label style="color: var(--accent); font-weight: bold; margin-bottom: 8px;">Integração com Estoque (Opcional para Baixa Automática)</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Digitar SKU (4 dígitos) ou Selecionar</label>
+                            <div style="display: flex; gap: 6px;">
+                                <input type="text" id="vendaSkuInput" placeholder="Ex: 4812" style="max-width: 100px;" oninput="preencherVendaPorSKU()">
+                                <select id="vendaSelectProduto" onchange="selecionarProdutoEstoqueDropdown()" style="flex: 1;">
+                                    <option value="">-- Selecionar do Estoque --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="max-width: 120px;">
+                            <label>Qtd. Vendida</label>
+                            <input type="number" id="vendaQtd" value="1" min="1" oninput="calcularTotalVendaSKU()">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group" style="flex: 2;"><label>Descrição</label><input type="text" id="caixaDesc" placeholder="Ex: Venda Lote Pateta"></div>
-                    <div class="form-group"><label>Valor (R$)</label><input type="number" id="caixaValor" step="0.01" placeholder="0.00"></div>
+                    <div class="form-group"><label>Valor Total (R$)</label><input type="number" id="caixaValor" step="0.01" placeholder="0.00"></div>
                 </div>
                 <div class="form-group" style="margin-top: 8px;">
                     <label>Comprovante / NF (Opcional)</label>
                     <input type="file" id="caixaAnexo" accept="image/*" onchange="processarAnexoCaixa(event)">
                 </div>
-                <button class="btn-salvar" style="background-color: var(--info); margin-top: 12px;" onclick="adicionarCaixa()">Salvar Lançamento</button>
+                <button class="btn-salvar" style="background-color: var(--info); margin-top: 12px;" onclick="adicionarCaixa()">Salvar Lançamento & Dar Baixa no Estoque</button>
             </div>
 
             <div class="card">
@@ -481,7 +574,7 @@
             </div>
         </div>
 
-        <!-- ABA 5: Ajuda -->
+        <!-- ABA 6: Ajuda -->
         <div id="tab-ajuda" class="tab-content">
             <div class="card">
                 <h2>Guia e Fórmulas</h2>
@@ -536,7 +629,7 @@
         const auth = firebase.auth();
 
         const EMAILS_PERMITIDOS = [
-            "luisfelipe.p.s@gmail.com" // Substitua pelo seu e-mail de acesso
+            "luisfelipe.p.s@gmail.com"
         ];
 
         window.valoresAtuais = {};
@@ -549,6 +642,7 @@
         window.impressoras = [];
         window.orcamentosSalvos = [];
         window.fluxoCaixa = [];
+        window.estoqueSalvo = [];
         window.graficoChartJS = null;
 
         const connectedRef = db.ref(".info/connected");
@@ -633,6 +727,13 @@
                 window.fluxoCaixa = data ? Object.values(data).sort((a, b) => b.id - a.id) : [];
                 renderizarCaixa();
             });
+
+            db.ref('estoque').on('value', snap => {
+                const data = snap.val();
+                window.estoqueSalvo = data ? Object.values(data) : [];
+                renderizarEstoque();
+                atualizarDropdownVendaEstoque();
+            });
         }
 
         function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
@@ -645,6 +746,151 @@
             document.getElementById('btn-' + abaId).classList.add('active');
             if (abaId === 'tab-caixa') { renderizarCaixa(); if(document.getElementById('caixaData').value === '') { document.getElementById('caixaData').valueAsDate = new Date(); } }
         }
+
+        // --- MÓDULO DE ESTOQUE E SKU DE 4 DÍGITOS ---
+
+        function generateUniqueSKU() {
+            let sku;
+            let tentativas = 0;
+            do {
+                sku = Math.floor(1000 + Math.random() * 9000).toString();
+                tentativas++;
+                if (tentativas > 100) break;
+            } while (window.estoqueSalvo.some(item => item.sku === sku));
+            return sku;
+        }
+
+        function salvarVarianteEstoque() {
+            const nome = document.getElementById('estNome').value.trim();
+            const material = document.getElementById('estMaterial').value;
+            const cor = document.getElementById('estCor').value.trim() || "Padrão";
+            const preco = parseFloat(document.getElementById('estPreco').value);
+            const qtd = parseInt(document.getElementById('estQtd').value);
+
+            if (!nome) { alert("Insira o nome base do produto."); return; }
+            if (isNaN(preco) || preco < 0) { alert("Insira um preço de venda válido."); return; }
+            if (isNaN(qtd) || qtd < 0) { alert("Insira uma quantidade inicial válida."); return; }
+
+            const sku = generateUniqueSKU();
+            const novaVariante = {
+                sku: sku,
+                nome: nome,
+                material: material,
+                cor: cor,
+                preco: preco,
+                stock: qtd
+            };
+
+            db.ref('estoque/' + sku).set(novaVariante).then(() => {
+                document.getElementById('estNome').value = '';
+                document.getElementById('estCor').value = '';
+                document.getElementById('estPreco').value = '';
+                document.getElementById('estQtd').value = '1';
+                alert(`Variante cadastrada com sucesso! SKU gerado: ${sku}`);
+            }).catch(err => {
+                alert("Erro ao salvar no Firebase: " + err.message);
+            });
+        }
+
+        function ajustarEstoque(sku, delta) {
+            const item = window.estoqueSalvo.find(i => i.sku === sku);
+            if (!item) return;
+            const novoValor = (item.stock || 0) + delta;
+            if (novoValor < 0) { alert("O estoque não pode ficar negativo."); return; }
+            db.ref('estoque/' + sku).update({ stock: novoValor });
+        }
+
+        function excluirVariante(sku) {
+            if (confirm(`Deseja excluir a variante SKU ${sku} do estoque?`)) {
+                db.ref('estoque/' + sku).remove();
+            }
+        }
+
+        function renderizarEstoque() {
+            const tb = document.getElementById('tabelaEstoque');
+            if (!tb) return;
+            tb.innerHTML = '';
+
+            const pesquisa = document.getElementById('pesquisaEstoque') ? document.getElementById('pesquisaEstoque').value.toLowerCase() : '';
+            let lista = window.estoqueSalvo;
+            if (pesquisa) {
+                lista = lista.filter(i => i.sku.toLowerCase().includes(pesquisa) || i.nome.toLowerCase().includes(pesquisa) || i.material.toLowerCase().includes(pesquisa) || i.cor.toLowerCase().includes(pesquisa));
+            }
+
+            if (lista.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777; padding: 20px;">Nenhuma variante cadastrada no estoque.</td></tr>';
+                return;
+            }
+
+            lista.forEach(i => {
+                tb.innerHTML += `
+                    <tr>
+                        <td><code style="color:var(--accent); font-weight:bold; font-size:15px;">${i.sku}</code></td>
+                        <td><strong>${i.nome}</strong></td>
+                        <td>${i.material} - ${i.cor}</td>
+                        <td>${formatarMoeda(i.preco)}</td>
+                        <td><span style="font-size:16px; font-weight:bold; color:${i.stock > 0 ? 'var(--success)' : 'var(--danger)'};">${i.stock} un.</span></td>
+                        <td style="text-align:center;">
+                            <button onclick="ajustarEstoque('${i.sku}', 1)" style="background:var(--success); color:white; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin-right:4px;">+</button>
+                            <button onclick="ajustarEstoque('${i.sku}', -1)" style="background:var(--warning); color:#000; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer; margin-right:4px;">-</button>
+                            <button onclick="excluirVariante('${i.sku}')" style="background:var(--danger); color:white; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function atualizarDropdownVendaEstoque() {
+            const sel = document.getElementById('vendaSelectProduto');
+            if (!sel) return;
+            let optionsHtml = '<option value="">-- Selecionar do Estoque --</option>';
+            window.estoqueSalvo.forEach(i => {
+                optionsHtml += `<option value="${i.sku}">${i.sku} - ${i.nome} (${i.material} / ${i.cor}) [Disponível: ${i.stock}]</option>`;
+            });
+            sel.innerHTML = optionsHtml;
+        }
+
+        function preencherVendaPorSKU() {
+            const skuInput = document.getElementById('vendaSkuInput').value.trim();
+            const sel = document.getElementById('vendaSelectProduto');
+            if (skuInput.length === 4) {
+                const item = window.estoqueSalvo.find(i => i.sku === skuInput);
+                if (item) {
+                    sel.value = item.sku;
+                    preencherDadosVendaItem(item);
+                }
+            }
+        }
+
+        function selecionarProdutoEstoqueDropdown() {
+            const sku = document.getElementById('vendaSelectProduto').value;
+            const skuInput = document.getElementById('vendaSkuInput');
+            if (sku) {
+                skuInput.value = sku;
+                const item = window.estoqueSalvo.find(i => i.sku === sku);
+                if (item) {
+                    preencherDadosVendaItem(item);
+                }
+            }
+        }
+
+        function preencherDadosVendaItem(item) {
+            document.getElementById('caixaTipo').value = 'entrada';
+            document.getElementById('caixaCategoria').value = 'Vendas';
+            document.getElementById('caixaDesc').value = `Venda SKU ${item.sku}: ${item.nome} (${item.material} - ${item.cor})`;
+            calcularTotalVendaSKU();
+        }
+
+        function calcularTotalVendaSKU() {
+            const sku = document.getElementById('vendaSkuInput').value.trim();
+            const qtd = parseInt(document.getElementById('vendaQtd').value) || 1;
+            const item = window.estoqueSalvo.find(i => i.sku === sku);
+            if (item && item.preco) {
+                document.getElementById('caixaValor').value = (item.preco * qtd).toFixed(2);
+            }
+        }
+
+        // --- FIM DO MÓDULO DE ESTOQUE ---
 
         function carregarImpressoras() {
             const select = document.getElementById('impressora'); 
@@ -890,12 +1136,37 @@
             let categoria = document.getElementById('caixaCategoria').value;
             const desc = document.getElementById('caixaDesc').value.trim() || "Lançamento Padrão";
             const valor = parseFloat(document.getElementById('caixaValor').value);
+            const skuVenda = document.getElementById('vendaSkuInput').value.trim();
+            const qtdVendida = parseInt(document.getElementById('vendaQtd').value) || 1;
+
             if (categoria === 'Outros') { categoria = document.getElementById('caixaCategoriaOutros').value.trim() || 'Outros'; }
             if (!data || isNaN(valor) || valor <= 0) { alert("Preencha a data e um valor válido."); return; }
 
+            // Se foi informado um SKU válido para baixa de estoque
+            if (skuVenda && skuVenda.length === 4) {
+                const itemEstoque = window.estoqueSalvo.find(i => i.sku === skuVenda);
+                if (itemEstoque) {
+                    if (itemEstoque.stock < qtdVendida) {
+                        alert(`Estoque insuficiente para o SKU ${skuVenda}! Disponível: ${itemEstoque.stock} un.`);
+                        return;
+                    }
+                    // Desconta automaticamente do estoque na nuvem
+                    const novoEstoque = itemEstoque.stock - qtdVendida;
+                    db.ref('estoque/' + skuVenda).update({ stock: novoEstoque });
+                }
+            }
+
             const transacao = { id: Date.now(), data, tipo, categoria, descricao: desc, valor, anexo: window.anexoCaixaBase64 };
             db.ref('caixa/' + transacao.id).set(transacao).then(() => {
-                document.getElementById('caixaDesc').value = ''; document.getElementById('caixaValor').value = ''; document.getElementById('caixaAnexo').value = ''; document.getElementById('caixaCategoriaOutros').value = ''; window.anexoCaixaBase64 = null;
+                document.getElementById('caixaDesc').value = ''; 
+                document.getElementById('caixaValor').value = ''; 
+                document.getElementById('caixaAnexo').value = ''; 
+                document.getElementById('caixaCategoriaOutros').value = ''; 
+                document.getElementById('vendaSkuInput').value = '';
+                document.getElementById('vendaSelectProduto').value = '';
+                document.getElementById('vendaQtd').value = '1';
+                window.anexoCaixaBase64 = null;
+                alert("Lançamento salvo e estoque atualizado com sucesso!");
             });
         }
 
@@ -910,7 +1181,6 @@
                 if (t.tipo === 'entrada') totalIn += t.valor; else totalOut += t.valor;
             });
 
-            // Gerenciamento e população do seletor de meses dinamicamente
             const selectMes = document.getElementById('filtroMesCaixa');
             const mesSelecionado = selectMes ? selectMes.value : 'todos';
             const mesesDisponiveis = [...new Set(window.fluxoCaixa.map(t => t.data.substring(0, 7)))].sort().reverse();
@@ -924,7 +1194,6 @@
                 selectMes.innerHTML = optionsHtml;
             }
 
-            // Filtragem combinada por tipo e por mês
             let itensExibicao = window.fluxoCaixa;
             if (window.filtroCaixaAtual !== 'todos') {
                 itensExibicao = itensExibicao.filter(t => t.tipo === window.filtroCaixaAtual);
@@ -994,7 +1263,7 @@
         }
 
         function exportarBackup() {
-            const backupCompleto = { orcamentos: window.orcamentosSalvos, caixa: window.fluxoCaixa, impressoras: window.impressoras };
+            const backupCompleto = { orcamentos: window.orcamentosSalvos, caixa: window.fluxoCaixa, impressoras: window.impressoras, estoque: window.estoqueSalvo };
             const blob = new Blob([JSON.stringify(backupCompleto)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Backup_CiA_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`; a.click(); URL.revokeObjectURL(url);
         }
 
@@ -1008,6 +1277,7 @@
                         if(obj.orcamentos) obj.orcamentos.forEach(o => db.ref('orcamentos/' + o.id).set(o));
                         if(obj.caixa) obj.caixa.forEach(c => db.ref('caixa/' + c.id).set(c));
                         if(obj.impressoras) obj.impressoras.forEach(i => db.ref('impressoras/' + i.id).set(i));
+                        if(obj.estoque) obj.estoque.forEach(s => db.ref('estoque/' + s.sku).set(s));
                         alert("Restaurado com sucesso!");
                     }
                 } catch(err) { alert("Arquivo inválido."); }
