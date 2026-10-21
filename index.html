@@ -611,9 +611,10 @@
         <!-- ABA 5: Fluxo de Caixa (Com Integração de Vendas por SKU) -->
         <div id="tab-caixa" class="tab-content">
             <div class="caixa-resumo-grid">
-                <div class="caixa-card"><h3>Entradas</h3><div class="valor valor-entrada" id="caixaEntradas">R$ 0,00</div></div>
-                <div class="caixa-card"><h3>Saídas</h3><div class="valor valor-saida" id="caixaSaidas">R$ 0,00</div></div>
-                <div class="caixa-card" style="border-color: var(--accent);"><h3 style="color: var(--text-main);">Saldo</h3><div class="valor valor-saldo" id="caixaSaldo">R$ 0,00</div></div>
+                <div class="caixa-card"><h3 id="rotuloEntradasCaixa">Entradas do mês</h3><div class="valor valor-entrada" id="caixaEntradas">R$ 0,00</div></div>
+                <div class="caixa-card"><h3 id="rotuloSaidasCaixa">Saídas do mês</h3><div class="valor valor-saida" id="caixaSaidas">R$ 0,00</div></div>
+                <div class="caixa-card" style="border-color: var(--accent);"><h3 id="rotuloSaldoCaixa" style="color: var(--text-main);">Saldo do mês</h3><div class="valor valor-saldo" id="caixaSaldo">R$ 0,00</div></div>
+                <div class="caixa-card" style="border-color: var(--success);"><h3>Entradas acumuladas</h3><div class="valor valor-entrada" id="caixaEntradasHistorico">R$ 0,00</div><small style="display:block; margin-top:5px; color:var(--text-muted); font-size:10px;">Todo o histórico, líquido após taxas</small></div>
             </div>
             <div class="caixa-grafico-container"><canvas id="graficoCaixa"></canvas></div>
 
@@ -790,7 +791,8 @@
         window.anexoCaixaBase64 = null; 
         window.filaItens = []; 
         window.idEditando = null; 
-        window.filtroCaixaAtual = 'todos'; 
+        window.filtroCaixaAtual = 'todos';
+        window.caixaMesInicializado = false;
         window.idCaixaEditando = null;
         window.transacaoCaixaOriginal = null;
 
@@ -903,13 +905,26 @@
 
         function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
+        // Retorna a data civil local em YYYY-MM-DD, sem conversão para UTC.
+        // Evita que o input type="date" avance um dia à noite em fusos negativos.
+        function obterDataLocalISO(data = new Date()) {
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
         function abrirAba(abaId) {
             document.querySelectorAll('.tab-content').forEach(aba => aba.style.display = 'none');
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             if (abaId === 'tab-orcamento') { document.getElementById(abaId).style.display = 'grid'; } 
             else { document.getElementById(abaId).style.display = 'block'; }
             document.getElementById('btn-' + abaId).classList.add('active');
-            if (abaId === 'tab-caixa') { renderizarCaixa(); if(document.getElementById('caixaData').value === '') { document.getElementById('caixaData').valueAsDate = new Date(); } }
+            if (abaId === 'tab-caixa') {
+                const campoDataCaixa = document.getElementById('caixaData');
+                if (campoDataCaixa && !campoDataCaixa.value) campoDataCaixa.value = obterDataLocalISO();
+                renderizarCaixa();
+            }
         }
 
         // --- MÓDULO DE ESTOQUE E SKU DE 4 DÍGITOS ---
@@ -1444,6 +1459,7 @@
             window.idCaixaEditando = null;
             window.transacaoCaixaOriginal = null;
             limparFormularioCaixa();
+            document.getElementById('caixaData').value = obterDataLocalISO();
             document.getElementById('btnSalvarCaixa').innerHTML = 'Salvar Lançamento & Dar Baixa no Estoque';
             document.getElementById('btnCancelarEdicaoCaixa').style.display = 'none';
         }
@@ -1562,12 +1578,26 @@
         }
 
         function renderizarCaixa() {
-            const tb = document.getElementById('tabelaCaixa'); tb.innerHTML = '';
+            const tb = document.getElementById('tabelaCaixa');
+            if (!tb) return;
+            tb.innerHTML = '';
 
             const selectMes = document.getElementById('filtroMesCaixa');
             const diaSelecionado = document.getElementById('filtroDiaCaixa')?.value || '';
-            const mesSelecionado = selectMes ? selectMes.value : 'todos';
-            const mesesDisponiveis = [...new Set((window.fluxoCaixa || []).map(t => (t.data || '').substring(0, 7)).filter(Boolean))].sort().reverse();
+            const mesAtual = obterDataLocalISO().substring(0, 7);
+            let mesSelecionado = selectMes ? selectMes.value : 'todos';
+
+            // Na primeira abertura, mostrar o mês atual em vez de somar todo o histórico.
+            if (selectMes && !window.caixaMesInicializado) {
+                mesSelecionado = mesAtual;
+                window.caixaMesInicializado = true;
+            }
+
+            // Mantém o mês atual disponível mesmo quando ainda não há lançamentos nele.
+            const mesesDisponiveis = [...new Set([
+                ...(window.fluxoCaixa || []).map(t => (t.data || '').substring(0, 7)).filter(Boolean),
+                mesAtual
+            ])].sort().reverse();
 
             if (selectMes) {
                 let optionsHtml = '<option value="todos">📅 Todos os Meses</option>';
@@ -1576,18 +1606,30 @@
                     optionsHtml += `<option value="${m}" ${mesSelecionado === m ? 'selected' : ''}>${mes}/${ano}</option>`;
                 });
                 selectMes.innerHTML = optionsHtml;
+                // Preserva explicitamente a escolha atual ao reconstruir as opções.
+                selectMes.value = mesSelecionado || 'todos';
+                mesSelecionado = selectMes.value || 'todos';
             }
 
-            let itensExibicao = [...(window.fluxoCaixa || [])];
-            if (window.filtroCaixaAtual !== 'todos') itensExibicao = itensExibicao.filter(t => t.tipo === window.filtroCaixaAtual);
+            // Primeiro aplica o período para o resumo; o filtro de tipo afeta apenas a lista.
+            let itensPeriodo = [...(window.fluxoCaixa || [])];
             if (diaSelecionado) {
-                itensExibicao = itensExibicao.filter(t => t.data === diaSelecionado);
+                itensPeriodo = itensPeriodo.filter(t => t.data === diaSelecionado);
             } else if (mesSelecionado && mesSelecionado !== 'todos') {
-                itensExibicao = itensExibicao.filter(t => (t.data || '').substring(0, 7) === mesSelecionado);
+                itensPeriodo = itensPeriodo.filter(t => (t.data || '').substring(0, 7) === mesSelecionado);
+            }
+
+            let itensExibicao = [...itensPeriodo];
+            if (window.filtroCaixaAtual !== 'todos') {
+                itensExibicao = itensExibicao.filter(t => t.tipo === window.filtroCaixaAtual);
             }
 
             let totalIn = 0, totalOut = 0;
-            itensExibicao.forEach(t => { if (t.tipo === 'entrada') totalIn += Number(t.valor) || 0; else totalOut += Number(t.valor) || 0; });
+            itensPeriodo.forEach(t => {
+                const valor = Number(t.valor) || 0;
+                if (t.tipo === 'entrada') totalIn += valor;
+                else totalOut += valor;
+            });
 
             if (itensExibicao.length === 0) {
                 tb.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#777; padding:20px;">Nenhum lançamento encontrado para os filtros selecionados.</td></tr>';
@@ -1604,12 +1646,29 @@
                 });
             }
 
+            // Indicadores principais acompanham o mês/dia/período selecionado.
             const saldo = totalIn - totalOut;
+            const periodoLabel = diaSelecionado ? 'do dia' : (mesSelecionado && mesSelecionado !== 'todos' ? 'do mês' : 'do período');
+            const rotuloEntradas = document.getElementById('rotuloEntradasCaixa');
+            const rotuloSaidas = document.getElementById('rotuloSaidasCaixa');
+            const rotuloSaldo = document.getElementById('rotuloSaldoCaixa');
+            if (rotuloEntradas) rotuloEntradas.textContent = `Entradas ${periodoLabel}`;
+            if (rotuloSaidas) rotuloSaidas.textContent = `Saídas ${periodoLabel}`;
+            if (rotuloSaldo) rotuloSaldo.textContent = `Saldo ${periodoLabel}`;
+
             document.getElementById('caixaEntradas').innerText = formatarMoeda(totalIn);
             document.getElementById('caixaSaidas').innerText = formatarMoeda(totalOut);
             document.getElementById('caixaSaldo').innerText = formatarMoeda(saldo);
             document.getElementById('caixaSaldo').style.color = saldo >= 0 ? 'var(--accent)' : 'var(--danger)';
-            renderizarGraficoCaixa(itensExibicao);
+
+            // Total de entradas líquido de todo o histórico, independente dos filtros selecionados.
+            const entradasHistorico = (window.fluxoCaixa || []).reduce((total, t) => {
+                return total + (t.tipo === 'entrada' ? (Number(t.valor) || 0) : 0);
+            }, 0);
+            const totalHistoricoEl = document.getElementById('caixaEntradasHistorico');
+            if (totalHistoricoEl) totalHistoricoEl.innerText = formatarMoeda(entradasHistorico);
+
+            renderizarGraficoCaixa(itensPeriodo);
         }
 
         function renderizarGraficoCaixa(itensFonte) {
@@ -1701,3 +1760,272 @@
     </script>
 </body>
 </html>
+
+/* =========================================================
+   EXPERIÊNCIA RESPONSIVA — MOBILE FIRST SEM ALTERAR DESKTOP
+   ========================================================= */
+html { overflow-x: hidden; }
+body { overflow-x: hidden; }
+.main-container { box-sizing: border-box; }
+
+@media (max-width: 768px) {
+    body {
+        padding: 8px;
+        align-items: stretch;
+        font-size: 14px;
+    }
+
+    .main-container {
+        width: 100%;
+        max-width: none;
+        padding: 0 2px 24px;
+    }
+
+    .header-title {
+        margin-bottom: 12px;
+        padding-top: 2px;
+    }
+
+    .logo-img {
+        max-width: 145px;
+        max-height: 54px;
+        object-fit: contain;
+    }
+
+    .header-title p {
+        font-size: 11px;
+        letter-spacing: .7px;
+        margin-top: 3px;
+    }
+
+    /* Todas as abas ficam visíveis de uma vez no celular. */
+    .tab-nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        width: 100%;
+        margin: 0 0 12px;
+        padding: 7px;
+        border: 1px solid #3a3a3a;
+        border-radius: 12px;
+        background: rgba(15,15,15,.97);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 6px 18px rgba(0,0,0,.35);
+        overflow: visible;
+        white-space: normal;
+    }
+
+    .tab-btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 9px 7px;
+        justify-content: center;
+        text-align: center;
+        font-size: 12px;
+        line-height: 1.15;
+        border-radius: 8px;
+        gap: 4px;
+        white-space: normal;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .tab-btn:active { transform: scale(.98); }
+    .badge { font-size: 10px; padding: 2px 5px; }
+
+    .tab-content { min-width: 0; width: 100%; }
+    .layout-grid { grid-template-columns: 1fr; gap: 12px; }
+
+    .card {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 13px !important;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    h2 {
+        font-size: 16px;
+        line-height: 1.25;
+        margin-bottom: 12px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .form-row .form-group,
+    .form-group {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    label { font-size: 12px; }
+
+    input[type="number"],
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="file"],
+    input[type="date"],
+    select,
+    .search-container input {
+        min-height: 44px;
+        padding: 10px 11px;
+        font-size: 16px;
+    }
+
+    button,
+    .btn-salvar,
+    .btn-cancelar,
+    .btn-backup,
+    .btn-editar,
+    .btn-excluir,
+    .btn-remove-fila,
+    .btn-doc,
+    .btn-pdf {
+        min-height: 42px;
+        touch-action: manipulation;
+    }
+
+    .btn-salvar { font-size: 15px; }
+
+    .header-galeria {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .backup-controls {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+
+    .btn-backup { width: 100%; box-sizing: border-box; }
+
+    .saved-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .saved-card-img {
+        height: 210px;
+    }
+
+    .saved-card-content { padding: 11px; }
+    .saved-title { font-size: 15px; }
+    .saved-detail { gap: 8px; }
+    .saved-detail span:last-child { text-align: right; }
+
+    .action-grid { gap: 6px; }
+    .action-grid button { min-height: 40px; }
+
+    /* Tabelas continuam completas; no celular passam a ter rolagem horizontal confortável. */
+    .table-responsive {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        border-radius: 7px;
+        scrollbar-width: thin;
+    }
+
+    table.batch-table {
+        font-size: 12px;
+        min-width: 620px;
+    }
+
+    table.batch-table th,
+    table.batch-table td {
+        padding: 8px 7px;
+    }
+
+    /* Deixa a primeira coluna identificadora visível enquanto a tabela desliza. */
+    table.batch-table th:first-child,
+    table.batch-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #242424;
+        box-shadow: 2px 0 5px rgba(0,0,0,.25);
+    }
+
+    table.batch-table thead th:first-child { z-index: 3; }
+
+    .search-container { margin-bottom: 12px; }
+
+    .caixa-resumo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        margin-bottom: 12px;
+    }
+
+    .caixa-card {
+        padding: 10px 7px;
+        border-radius: 9px;
+    }
+
+    .caixa-card h3 { font-size: 10px; }
+    .caixa-card .valor { font-size: 16px; word-break: break-word; }
+
+    .caixa-grafico-container {
+        height: 220px;
+        padding: 9px;
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+
+    .fila-totais {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        padding: 11px;
+        gap: 8px;
+    }
+
+    .fila-totais h3 { font-size: 17px; }
+    .btn-pdf { width: 100%; }
+
+    .help-section { padding: 12px; }
+    .formula-box { font-size: 12px; }
+
+    /* Evita elementos com largura fixa criarem scroll lateral. */
+    [style*="width: 380px"],
+    [style*="max-width: 380px"] {
+        max-width: 100% !important;
+    }
+
+    .status-nuvem {
+        bottom: 5px;
+        right: 5px;
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+}
+
+@media (min-width: 480px) and (max-width: 768px) {
+    .tab-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .tab-btn { font-size: 11.5px; }
+    .saved-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .saved-card-img { height: 160px; }
+}
+
+@media (max-width: 380px) {
+    body { padding: 5px; }
+    .main-container { padding-left: 0; padding-right: 0; }
+    .tab-nav { gap: 5px; padding: 6px; }
+    .tab-btn { min-height: 42px; font-size: 11px; padding: 7px 4px; }
+    .card { padding: 11px !important; }
+    .backup-controls { grid-template-columns: 1fr; }
+    .caixa-resumo-grid { grid-template-columns: 1fr 1fr; }
+}
